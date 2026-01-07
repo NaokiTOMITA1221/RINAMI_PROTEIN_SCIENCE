@@ -31,3 +31,7 @@ Creation of the environment:
       torch-scatter torch-sparse torch-cluster torch-spline-conv \
       -f https://data.pyg.org/whl/torch-2.4.0+cu121.html
 
+
+# Usage of RINAMI
+
+

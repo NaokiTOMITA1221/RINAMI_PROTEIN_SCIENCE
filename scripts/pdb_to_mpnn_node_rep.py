@@ -45,11 +45,9 @@ class PDBGraphBuilder:
         X, S, mask, lengths, chain_M, chain_encoding_all, chain_list_list, visible_list_list, masked_list_list, masked_chain_length_list_list, chain_M_pos, omit_AA_mask, residue_idx, dihedral_mask, tied_pos_list_of_lists_list, pssm_coef, pssm_bias, pssm_log_odds_all, bias_by_res_all, tied_beta = tied_featurize([pdb[0]], self.device, None, None, None, None, None, None, ca_only=False)
         _, mpnn_embed, _ = self.protein_mpnn(X, S, mask, chain_M, residue_idx, chain_encoding_all, None)
             
-        #torch.save(mpnn_embed.reshape((mpnn_embed.shape[-2], mpnn_embed.shape[-1])).to(self.device), f"../processed_data/mpnn_embed_data/{name}.pt")
-        #torch.save(mpnn_embed['h_S'], f"../processed_data/mpnn_embed_data/h_S_{name}.pt")
-        torch.save(mpnn_embed['h_V'], f"../processed_data/Ikeda_SSP_and_Variants_mpnn_embed_data/{name}.pt")
-        #torch.save(mpnn_embed['h_E'], f"../processed_data/mpnn_embed_data/h_E_{name}.pt")
-        #torch.save(mpnn_embed['E_idx'], f"../processed_data/mpnn_embed_data/E_idx_{name}.pt")
+
+        torch.save(mpnn_embed['h_V'], f"../processed_data/Ikeda_SSP_and_Variants_ProteinMPNN_node_rep/{name}.pt")
+
 if __name__ == "__main__":
     sb.call('mkdir -p ../processed_data/Ikeda_SSP_and_Variants_mpnn_embed_data', shell=True)
     pdbs = glob.glob('../processed_data/Ikeda_SSP_and_Variants_pdb/*.pdb')
