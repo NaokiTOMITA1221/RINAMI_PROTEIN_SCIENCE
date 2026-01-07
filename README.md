@@ -1,9 +1,9 @@
 # RINAMI: Residue-attributed Interpretable Neural network for predicting Absolute folding free energy by Merging structure and sequence Information
 
 
-Because of the data-size limitation, we put the all data used for model training and testing on the Zenodo strage whose link was descrived below: (URL of Zenodo)
+Because of the data-size limitation, we put the all data used for model training and testing on the Zenodo strage: (URL of Zenodo)
 
-After cloning this repository and making a directory named "processed_data" in the cloned repository, please download all data in Zenodo into the created directory following protocols.
+After cloning this repository and making a directory named "processed_data" in the cloned repository, please download all data in Zenodo into the created directory following protocols if you need.
 
 
 
