@@ -25,7 +25,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 
-
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 # ==============================================================
@@ -58,14 +58,13 @@ def make_balanced_minibatch_indices(labels01, batch_size, steps_per_epoch, seed=
     return batches
 
 
-def gather_batch_by_indices(seq_list, struct_list, profile_list, rosetta_list, dG_list, indices):
+def gather_batch_by_indices(seq_list, struct_list, profile_list, dG_list, indices):
     """index リストから各入力を抽出（学習で使用）"""
     aa_seq_batch  = [seq_list[i]     for i in indices]
     struct_batch  = [struct_list[i]  for i in indices]
     profile_batch = [profile_list[i] for i in indices]
-    rosetta_batch = [rosetta_list[i] for i in indices]
     dG_batch      = [dG_list[i]      for i in indices]
-    return aa_seq_batch, struct_batch, profile_batch, rosetta_batch, dG_batch
+    return aa_seq_batch, struct_batch, profile_batch, dG_batch
 
 
 # ==============================================================
@@ -160,8 +159,8 @@ class RINAMI(nn.Module):
 
         # Positional encoding
         self.pos_enc              = layers.PositionalEncoding(self.pe_dim  )
-        self.MLP_pe_node_rep      = layers.MLPNet(self.pe_dim  , self.mid_dim)
-        self.MLP_pe_aa_seq        = layers.MLPNet(self.pe_dim  , self.mid_dim)
+        self.MLP_pe_node_rep      = layers.MLP(self.pe_dim  , self.mid_dim)
+        self.MLP_pe_aa_seq        = layers.MLP(self.pe_dim  , self.mid_dim)
 
         # Batch Norm
         self.bn_refine_aa   = nn.BatchNorm1d(self.mid_dim)
@@ -172,13 +171,13 @@ class RINAMI(nn.Module):
 
         # Layer Norm
         self.layer_norm_aa_seq_rep   = nn.LayerNorm(self.aa_rep_dim)
-        self.layer_norm_node_rep     = nn.LayerNorm(self.in_dim+self.rosetta_score_dim+self.profile_dim)
+        self.layer_norm_node_rep     = nn.LayerNorm(self.in_dim+self.profile_dim)
         self.layer_norm_interaction1 = nn.LayerNorm(self.mid_dim)
         self.layer_norm_interaction2 = nn.LayerNorm(self.mid_dim)
         self.layer_norm_interaction3 = nn.LayerNorm(self.mid_dim)
 
         # Projections
-        self.ProteinMPNN_profile_refine = layers.MLP(self.in_dim+self.rosetta_score_dim+self.profile_dim, self.mid_dim)
+        self.ProteinMPNN_rep_refine     = layers.MLP(self.in_dim+self.profile_dim, self.mid_dim)
         self.ESM_rep_refine             = layers.MLP(self.aa_rep_dim, self.mid_dim)
 
         # MultiHeadCrossAttention
@@ -231,7 +230,7 @@ class RINAMI(nn.Module):
         # refine the structural- and sequence-representations and add PE to refined representations
         refined_aa_seq_reps = self.ESM_rep_refine(self.layer_norm_aa_seq_rep(aa_seq_reps))
         refined_aa_seq_reps = self.dropout(self._bn_seq(refined_aa_seq_reps, self.bn_refine_aa, aa_seq_mask)) + self.MLP_pe_aa_seq(pe.to(self.device))
-        refined_node_reps   = self.ProteinMPNN_profile_refine(self.layer_norm_node_rep(concated_node_reps)) + self.MLP_pe_node_rep(pe.to(self.device))
+        refined_node_reps   = self.ProteinMPNN_rep_refine(self.layer_norm_node_rep(concated_node_reps)) + self.MLP_pe_node_rep(pe.to(self.device))
         refined_node_reps   = self.dropout(self._bn_seq(refined_node_reps, self.bn_refine_node, node_mask))
 
         # CrossAttention
@@ -260,7 +259,7 @@ class RINAMI(nn.Module):
 # 学習（不均衡対策込み）
 # ==============================================================
 
-def train_model(model_save_path, trained_model_param=None, num_epochs=5, batch_size=256, lr=3e-5, dropout=0., pth_ind=None, ESM_size=480):
+def train_model(model_save_path, trained_model_param=None, num_epochs=5, batch_size=128, dropout=0., pth_ind=None, ESM_size=320):
     decoy_to_seq_dict = json.load(open('../processed_data/decoy_to_seq_dict.json'))
     
     ##########################
@@ -310,9 +309,9 @@ def train_model(model_save_path, trained_model_param=None, num_epochs=5, batch_s
     # Loading RINAMI  #
     ###################
     if trained_model_param is None:
-        model = dGPredictor_with_ProteinMPNN_and_ESM(dropout=dropout, ESM_size=ESM_size).to(device)
+        model = RINAMI(dropout=dropout, ESM_size=ESM_size).to(device)
     else:
-        model = dGPredictor_with_ProteinMPNN_and_ESM(dropout=dropout, ESM_size=ESM_size).to(device)
+        model = RINAMI(dropout=dropout, ESM_size=ESM_size).to(device)
         model.load_state_dict(torch.load(trained_model_param))
 
     ####################
@@ -408,7 +407,7 @@ def train_model(model_save_path, trained_model_param=None, num_epochs=5, batch_s
         validation_loss = 0.0
         p_fold_probs, y_fold_true = [], []
         steps_val = max(1, math.ceil(len(seq_list_val_data)/batch_size))
-        batch_list_val = batch_maker_for_5_inputs(
+        batch_list_val = batch_maker_for_inputs(
             seq_list_val_data, struct_list_val_data, mpnn_profile_val_data, dG_list_val_data, batch_size
         )
         with torch.no_grad():
@@ -420,7 +419,7 @@ def train_model(model_save_path, trained_model_param=None, num_epochs=5, batch_s
 
                 # 評価は foldable=1
                 y_fold_batch = torch.tensor([1.0 if dG.item() > 0 else 0.0 for dG in dG_batch], device=device)
-                logits = model(aa_seq_batch, struct_batch, profile_batch, rosetta_score_batch, noise=False)
+                logits = model(aa_seq_batch, struct_batch, profile_batch)
 
                 # 少数=1 の側での val loss
                 if minority_is_foldable:
@@ -537,7 +536,7 @@ def test_model_with_Rocklin_benchmark_set(trained_model_param, ESM_size, num_epo
         mpnn_profile_val_data.append(glob.glob(f'../processed_data/Rocklin_zero_shot_profile_data/{name}*.npy')[0])
         seq_list_val_data.append(seq)
     
-    model = dGPredictor_with_ProteinMPNN_and_ESM( ESM_size=ESM_size).to(device)
+    model = RINAMI( ESM_size=ESM_size).to(device)
     model.load_state_dict(torch.load(trained_model_param))
     criterion_1 = nn.BCEWithLogitsLoss()
 
@@ -556,7 +555,7 @@ def test_model_with_Rocklin_benchmark_set(trained_model_param, ESM_size, num_epo
             profile_batch = batch[2]
             foldability_batch = torch.tensor(batch[3], dtype=torch.float32).to(device)
 
-            foldability = model(aa_seq_batch, struct_batch, profile_batch, profile_batch, noise=False)
+            foldability = model(aa_seq_batch, struct_batch, profile_batch)
 
             loss = criterion_1(foldability, foldability_batch)
             validation_loss += loss.item()
@@ -616,28 +615,27 @@ def test_model_with_Rocklin_benchmark_set(trained_model_param, ESM_size, num_epo
 
 
 if __name__ == "__main__":
-"""
-Testing  : python3 RINAMI_foldability_prediction_train_and_test.py <model param path> <test mode: "Mega_test", "Maxwell_test", "Garcia_benchmark">
-"""
+   """
+    Testing  : python3 RINAMI_foldability_prediction_train_and_test.py <model param path> <test mode: "Mega_test", "Maxwell_test", "Garcia_benchmark">
+   """
    args = sys.argv
 
-   if len(args) == 2:
+   if len(args) == 1:
        ESM_dim = 320
        print('Training mode...')
        print('basic training step')
-       train_model(args[1], num_epochs=1, lr=1e-4, dropout=0., ESM_size=ESM_dim)
+       train_model(args[1], num_epochs=1, dropout=0., ESM_size=ESM_dim)
 
-   elif len(args) == 3:
+   elif len(args) == 2:
        ESM_dim = 320
        print('Training mode...')
        print(f'training step')
-       train_model(args[1], trained_model_param=args[2], num_epochs=1, lr=1e-5, dropout=0., ESM_size=ESM_dim)
+       train_model(args[1], trained_model_param=args[2], num_epochs=1, dropout=0., ESM_size=ESM_dim)
    
-   elif len(args) == 4:
+   elif len(args) == 3:
         ESM_dim = 320
-        trained_model_path = args[-1]
-        ESM_size           = int(args[-2])
-        test_mode          = args[-3]
+        trained_model_path = args[-2]
+        test_mode          = args[-1]
 
         if test_mode == 'Garcia_benchmark':
             print('Test mode: Rocklin_benchmark_test')

@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import pandas as pd
 import tqdm
 import layers
-from util import batch_maker, batch_maker_for_5_inputs, aa_sequences_to_padded_onehot, pad_feature_matrices
+from util import batch_maker, batch_maker_for_inputs, aa_sequences_to_padded_onehot, pad_feature_matrices
 import gc
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from transformers import get_cosine_schedule_with_warmup
@@ -18,7 +18,7 @@ import math
 import subprocess as sb
 
 
-
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 
@@ -47,24 +47,24 @@ class RINAMI(nn.Module):
         self.MLP_pe_node_rep      = layers.MLP(self.pe_dim  , self.mid_dim)
         self.MLP_pe_aa_seq        = layers.MLP(self.pe_dim  , self.mid_dim)
 
-        #Batch Norm
-        self.bn_proj_aa   = nn.BatchNorm1d(self.mid_dim)
-        self.bn_proj_node = nn.BatchNorm1d(self.mid_dim)
-        self.bn_ic1       = nn.BatchNorm1d(self.mid_dim)
-        self.bn_ic2       = nn.BatchNorm1d(self.mid_dim)
-        self.bn_ic3       = nn.BatchNorm1d(self.mid_dim)
+        # Batch Norm
+        self.bn_refine_aa   = nn.BatchNorm1d(self.mid_dim)
+        self.bn_refine_node = nn.BatchNorm1d(self.mid_dim)
+        self.bn_ic1         = nn.BatchNorm1d(self.mid_dim)
+        self.bn_ic2         = nn.BatchNorm1d(self.mid_dim)
+        self.bn_ic3         = nn.BatchNorm1d(self.mid_dim)
 
 
         #Layer Norm
         self.layer_norm_aa_seq_rep   = nn.LayerNorm(self.aa_rep_dim)
-        self.layer_norm_node_rep     = nn.LayerNorm(self.in_dim+self.rosetta_score_dim+self.profile_dim)
+        self.layer_norm_node_rep     = nn.LayerNorm(self.in_dim+self.profile_dim)
         self.layer_norm_interaction1 = nn.LayerNorm(self.mid_dim)
         self.layer_norm_interaction2 = nn.LayerNorm(self.mid_dim)
         self.layer_norm_interaction3 = nn.LayerNorm(self.mid_dim)
 
         # Projections
-        self.ProteinMPNN_profile_projection = layers.MLPNet(self.in_dim+self.rosetta_score_dim+self.profile_dim, self.mid_dim)
-        self.ESM_rep_projection             = layers.MLPNet(self.aa_rep_dim, self.mid_dim)
+        self.ProteinMPNN_rep_refine     = layers.MLP(self.in_dim+self.profile_dim, self.mid_dim)
+        self.ESM_rep_refine             = layers.MLP(self.aa_rep_dim, self.mid_dim)
 
         # MultiHeadCrossAttention
         self.CA_aa_seq_rep_and_node_rep = layers.MultiHeadCrossAttention(self.mid_dim, self.mid_dim, heads=20, dim_head=128)
@@ -105,7 +105,6 @@ class RINAMI(nn.Module):
         profiles       = [np.load(path).T for path in profile_path_list]
         node_reps      = pad_feature_matrices(feat_list).to(self.device)
         profiles       = pad_feature_matrices(profiles).to(self.device)
-        rosetta_scores = pad_feature_matrices(rosetta_scores).to(self.device)
         concated_aa_seq_reps = aa_seq_reps
         concated_node_reps   = node_reps
         concated_node_reps   = torch.concat([concated_node_reps, profiles], dim=-1)
@@ -121,18 +120,18 @@ class RINAMI(nn.Module):
         pe,_ = layers.create_padded_positional_encodings(self.pos_enc, seq_lengths)
 
         #projecting the reps and profiles
-        projected_aa_seq_reps = self.ESM_rep_projection(self.layer_norm_aa_seq_rep(concated_aa_seq_reps))
-        projected_aa_seq_reps = self.dropout( self._bn_seq(projected_aa_seq_reps, self.bn_proj_aa, aa_seq_mask) ) +  self.MLP_pe_aa_seq(pe.to(self.device))
-        projected_node_reps   = self.ProteinMPNN_profile_projection(self.layer_norm_node_rep(concated_node_reps)) +  self.MLP_pe_node_rep(pe.to(self.device))
-        projected_node_reps   = self.dropout( self._bn_seq(projected_node_reps, self.bn_proj_node, node_mask) )
+        refined_aa_seq_reps = self.ESM_rep_refine(self.layer_norm_aa_seq_rep(aa_seq_reps))
+        refined_aa_seq_reps = self.dropout(self._bn_seq(refined_aa_seq_reps, self.bn_refine_aa, aa_seq_mask)) + self.MLP_pe_aa_seq(pe.to(self.device))
+        refined_node_reps   = self.ProteinMPNN_rep_refine(self.layer_norm_node_rep(concated_node_reps)) + self.MLP_pe_node_rep(pe.to(self.device))
+        refined_node_reps   = self.dropout(self._bn_seq(refined_node_reps, self.bn_refine_node, node_mask))
 
         # 2) CrossAttention のマスクは「query用(node_mask)」「key用(aa_seq_mask)」を分ける
         interaction = self.CA_aa_seq_rep_and_node_rep(
-            projected_aa_seq_reps,  
-            projected_node_reps,
-            aa_seq_mask,                    
-            node_mask         
-        )
+                    refined_aa_seq_reps,
+                    refined_node_reps,
+                    aa_seq_mask,
+                    node_mask
+                    )
 
         # 3) スコアヘッド
         h = self.interaction_converter1(self.layer_norm_interaction1(interaction))
@@ -162,7 +161,7 @@ class RINAMI(nn.Module):
         
         
 
-def train_model(model_save_path, trained_model_param=None, num_epochs=5, batch_size=256, lr=3e-5, dropout=0., pth_ind=None, ESM_size=320):
+def train_model(model_save_path, trained_model_param=None, num_epochs=5, batch_size=128, dropout=0., pth_ind=None, ESM_size=320):
     ##########################
     # Loading training data  #
     ##########################
@@ -252,7 +251,7 @@ def train_model(model_save_path, trained_model_param=None, num_epochs=5, batch_s
             profile_batch  = batch[2]
             dG_batch       = torch.tensor(batch[3], dtype=torch.float32).to(device)
         
-            output   = model(aa_seq_batch, struct_batch, profile_batch, rosetta_score_batch)
+            output   = model(aa_seq_batch, struct_batch, profile_batch)
 
             loss = criterion_1(output, dG_batch)
 
@@ -286,7 +285,7 @@ def train_model(model_save_path, trained_model_param=None, num_epochs=5, batch_s
                 profile_batch  = batch[2]
                 dG_batch = torch.tensor(batch[3], dtype=torch.float32).to(device)
 
-                output = model(aa_seq_batch, struct_batch, profile_batch, rosetta_score_batch)
+                output = model(aa_seq_batch, struct_batch, profile_batch)
 
                 loss = criterion_1(output, dG_batch)
                 validation_loss += loss.item()
@@ -343,7 +342,6 @@ def test_model(trained_model_param, ESM_size, batch_size=16):
     e_dG_list = []
 
     model.eval()
-    validation_loss = 0.0
     batch_list_test = batch_maker_for_inputs(seq_list_test_data, struct_list_test_data, mpnn_profile_test_data, dG_list_test_data, batch_size)
 
 
@@ -353,7 +351,7 @@ def test_model(trained_model_param, ESM_size, batch_size=16):
             struct_batch = batch[1]
             profile_batch  = batch[2]
             dG_batch = torch.tensor(batch[3], dtype=torch.float32).to(device)
-            output = model(aa_seq_batch, struct_batch, profile_batch, rosetta_score_batch)
+            output = model(aa_seq_batch, struct_batch, profile_batch)
 
 
 
@@ -362,7 +360,6 @@ def test_model(trained_model_param, ESM_size, batch_size=16):
                 e_dG_list.append(e_dG)
 
 
-        loss_avg_test = validation_loss / int(len(seq_list_val_data)/batch_size)
         corr          = np.corrcoef(p_dG_list,e_dG_list)[0,1]
 
         print(f"Correlation of test: {corr}")
@@ -375,7 +372,6 @@ def pdb_id_to_dGmat(trained_model_param, ESM_size):
     df                 = pd.read_csv('../processed_data/csv/mega_test.csv')
     struct_list_data   = []
     mpnn_profile_data  = []
-    rosetta_score_data = []
     seq_list_data      = []
     dG_list_data       = []
     wt_names           = []
@@ -385,7 +381,6 @@ def pdb_id_to_dGmat(trained_model_param, ESM_size):
             mutant_label = name.split('.pdb')[0] + name.split('.pdb')[1]
             label = wt_name.split('.pdb')[0]
             struct_list_val_data.append(f'../processed_data/mpnn_embed_data/{name}.pt')
-            rosetta_score_val_data.append(f'../processed_data/rosetta_respective_score_data/{name}.npy')
             mpnn_profile_val_data.append(f'../processed_data/Mega_mt_profile_data/{name}_profile.npy')
             seq_list_val_data.append(aa_seq)
             dG_list_val_data.append(dG)
@@ -413,16 +408,14 @@ def test_model_with_Maxwell(trained_model_param, ESM_size, num_epochs=1, batch_s
     ######################
     df                 = pd.read_csv('../processed_data/csv/maxwell2007_sequences.csv')
     struct_list_data   = []
-    rosetta_score_data = []
     mpnn_profile_data  = []
     
     for protein_id in df['id']:
-        rosetta_score_data.append(glob.glob(f'../processed_data/maxwell_rosetta_respective_score_data/{protein_id}*.npy')[0])
         struct_list_data.append(glob.glob(f'../processed_data/maxwell_mpnn_embed_data/{protein_id}*.pt')[0])
         mpnn_profile_data.append(glob.glob(f'../processed_data/maxwell2009_pdb_profile_data/{protein_id}*.npy')[0])
 
     seq_list_data = list(df['sequence'])
-    dG_list_data = [dG*0.239006 for dG in df_train_data['dg']] #Convert: [J/mol] -> [kcal/mol]
+    dG_list_data = [dG*0.239006 for dG in df['dg']] #Convert: [J/mol] -> [kcal/mol]
     
     model = RINAMI( ESM_size=ESM_size).to(device)
     model.load_state_dict(torch.load(trained_model_param))
@@ -436,7 +429,7 @@ def test_model_with_Maxwell(trained_model_param, ESM_size, num_epochs=1, batch_s
 
         model.eval()
         validation_loss = 0.0
-        batch_list_val = batch_maker_for_inputs(seq_list_val_data, struct_list_val_data, mpnn_profile_val_data, dG_list_val_data, batch_size)
+        batch_list_val = batch_maker_for_inputs(seq_list_data, struct_list_data, mpnn_profile_data, dG_list_data, batch_size)
 
 
         with torch.no_grad():
@@ -446,7 +439,7 @@ def test_model_with_Maxwell(trained_model_param, ESM_size, num_epochs=1, batch_s
                 profile_batch = batch[2]
                 dG_batch = torch.tensor(batch[3], dtype=torch.float32).to(device)
 
-                output = model(aa_seq_batch, struct_batch, profile_batch, score_batch)
+                output = model(aa_seq_batch, struct_batch, profile_batch)
 
                 for p_dG, e_dG in zip(output.to('cpu'), dG_batch.to('cpu')):
                     print(round(float(p_dG), 2), round(float(e_dG), 2))
@@ -464,22 +457,16 @@ def test_model_with_Maxwell(trained_model_param, ESM_size, num_epochs=1, batch_s
 
 
 if __name__ == "__main__":
-"""
-Testing  : python3 RINAMI_regression_train_and_test.py <model param path> <test mode: "Mega_test", "Maxwell_test", "res_AA_wise_dG_mat">
-"""
+   """
+    Testing  : python3 RINAMI_regression_train_and_test.py <model param path> <test mode: "Mega_test", "Maxwell_test", "res_AA_wise_dG_mat">
+   """
    args = sys.argv
    
+       
    if len(args) == 2:
-       print('Training mode...')
-       ESM_dim = 320
-       
-       print('basic training step')
-       train_model(args[1], num_epochs=3, lr=1e-4, dropout=0., ESM_size=ESM_dim)
-       
-   elif len(args) == 3:
        ESM_dim = 320
        print(f'training step')
-       train_model(args[1], trained_model_param=args[2], num_epochs=3, lr=1e-5, dropout=0., ESM_size=ESM_dim)
+       train_model(args[1], trained_model_param=args[2], num_epochs=3, dropout=0., ESM_size=ESM_dim)
     
         
    
@@ -493,7 +480,7 @@ Testing  : python3 RINAMI_regression_train_and_test.py <model param path> <test 
             test_model(trained_model_path, ESM_size=ESM_dim)
         elif test_mode == 'Maxwell_test':
             print('Test mode: Maxwell_test')
-            test_model_with_Maxwell(trained_model_path, ESM_size)
+            test_model_with_Maxwell(trained_model_path, ESM_size=ESM_dim)
         elif test_mode == 'res_AA_wise_dG_mat':
             print('Extracting residue-amino-acid-wise dG matrics')
             pdb_id_to_dGmat(trained_model_path, ESM_size)

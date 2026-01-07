@@ -43,13 +43,12 @@ def batch_maker_for_inputs(aa_seq_list, struct_list, profile_list, dG_list, batc
         profile_batch       = []
         dG_batch            = []
         for data in zip_list[batch_ind*batch_size:(batch_ind+1)*batch_size]:
-            aa_seq, struct_seq, rosetta_score, profile_data, dG_data = data[0], data[1], data[2], data[3], data[4]
+            aa_seq, struct_seq, profile_data, dG_data = data[0], data[1], data[2], data[3]
             aa_seq_batch.append(aa_seq)
             struct_seq_batch.append(struct_seq)
-            rosetta_score_batch.append(rosetta_score)
             profile_batch.append(profile_data)
             dG_batch.append(dG_data)
-        batch_list.append([aa_seq_batch, struct_seq_batch, rosetta_score_batch, profile_batch, dG_batch])
+        batch_list.append([aa_seq_batch, struct_seq_batch, profile_batch, dG_batch])
     return batch_list
 
 
