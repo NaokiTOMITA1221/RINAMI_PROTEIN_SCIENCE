@@ -454,19 +454,19 @@ def test_model_with_Maxwell(trained_model_param, ESM_size, num_epochs=1, batch_s
 
 if __name__ == "__main__":
    """
-    Testing  : python3 RINAMI_regression_train_and_test.py <model param path> <test mode: "Mega_test", "Maxwell_test", "res_AA_wise_dG_mat">
+    Testing  : python3 RINAMI_regression_train_and_test.py test_mode <model param path> <test set: "Mega_test", "Maxwell_test", "res_AA_wise_dG_mat">
    """
    args = sys.argv
    
        
-   if len(args) == 2:
+   if len(args) == 3:
        ESM_dim = 320
        print(f'training step')
        train_model(args[1], trained_model_param=args[2], num_epochs=3, dropout=0., ESM_size=ESM_dim)
     
         
    
-   elif len(args) == 3:
+   elif len(args) == 4:
         ESM_dim = 320
         trained_model_path = args[-2]
         test_mode          = args[-1]

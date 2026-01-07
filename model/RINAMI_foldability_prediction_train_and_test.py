@@ -616,19 +616,19 @@ if __name__ == "__main__":
    """
    args = sys.argv
 
-   if len(args) == 1:
+   if len(args) == 2:
        ESM_dim = 320
        print('Training mode...')
        print('basic training step')
        train_model(args[1], num_epochs=1, dropout=0., ESM_size=ESM_dim)
 
-   elif len(args) == 2:
+   elif len(args) == 3:
        ESM_dim = 320
        print('Training mode...')
        print(f'training step')
        train_model(args[1], trained_model_param=args[2], num_epochs=1, dropout=0., ESM_size=ESM_dim)
    
-   elif len(args) == 3:
+   elif len(args) == 4:
         ESM_dim = 320
         trained_model_path = args[-2]
         test_mode          = args[-1]
