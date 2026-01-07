@@ -3,13 +3,20 @@
 
 Because of the data-size limitation, we put the all data used for model training and testing on the Zenodo strage: https://zenodo.org/records/18171296?preview=1&token=eyJhbGciOiJIUzUxMiJ9.eyJpZCI6IjBlNDU2Y2IzLWYzZGMtNGFhMy04ODk4LTZjYjVhODJkMDhjMCIsImRhdGEiOnt9LCJyYW5kb20iOiJkZGU2ZGMzMDU3ZjJhMGNhNzRjMWNlMjMxOGI3NWMyZCJ9.0PeEYd5-3wrL2Tvy74iufNJivvQt0wXq6XDvkR4Ne17KFRIuuxmLCyZkRRftI5DFbLWXWMRl35-6Rrmay89iGw
 
+    Tested environment:
+    - NVIDIA Driver: 530.41.03
+    - CUDA: 12.1
+    - GPU: NVIDIA GeForce RTX 3080 (10GB)
+
+
+
 Cloning this repository:
 
     git clone https://github.com/NaokiTOMITA1221/RINAMI_PROTEIN_SCIENCE.git
     cd RINAMI_PROTEIN_SCIENCE
     mkdir processed_data
 
-After cloning this repository and making a directory named "processed_data" in the cloned repository, please download all data, deposited on Zenodo: (URL), into "processed_data" and unzip if you need.
+After cloning this repository and making a directory named "processed_data" in the cloned repository, please download all data, deposited on Zenodo, into "processed_data" and unzip if you need.
 
 
 
