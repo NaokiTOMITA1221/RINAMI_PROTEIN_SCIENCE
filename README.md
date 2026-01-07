@@ -1,5 +1,5 @@
 # RINAMI: Residue-attributed Interpretable Neural network for predicting Absolute folding free energy by Merging structure and sequence Information
-!["Figure of architecture"](./Figure1_RINAMI.png)
+!["Figure of architecture"](./Figure/Figure1_RINAMI.png)
 
     Tested environment:
     - NVIDIA Driver: 530.41.03
