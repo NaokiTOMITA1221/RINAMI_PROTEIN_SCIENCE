@@ -1,0 +1,25 @@
+name: RINAMI_env
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pip
+
+  # --- core scientific stack ---
+  - numpy
+  - pandas
+  - scipy
+  - scikit-learn
+  - tqdm
+
+  # --- bio ---
+  - biopython
+
+  # --- pip-managed (GPU-capable) ---
+  - pip:
+      # ESM
+      - fair-esm
+
+      # utilities
+      - einops
+
