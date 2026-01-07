@@ -168,14 +168,12 @@ def train_model(model_save_path, trained_model_param=None, num_epochs=5, batch_s
     df_train_data = pd.read_csv('../processed_data/csv/mega_train.csv')
     struct_list_train_data   = []
     mpnn_profile_train_data  = []
-    rosetta_score_train_data = []
 
     for name, wt_name in zip(df_train_data['name'], df_train_data['WT_name']):
         mutant_label = name.split('.pdb')[0] + name.split('.pdb')[1]
         label        = wt_name.split('.pdb')[0]
-        struct_list_train_data.append(f'../processed_data/mpnn_embed_data/{name}.pt')
-        rosetta_score_train_data.append(f'../processed_data/rosetta_respective_score_data/{name}.npy')
-        mpnn_profile_train_data.append(f'../processed_data/Mega_mt_profile_data/{name}_profile.npy')
+        struct_list_train_data.append(f'../processed_data/Mega_ProteinMPNN_node_rep/{name}.pt')
+        mpnn_profile_train_data.append(f'../processed_data/Mega_ProteinMPNN_output_profile/{name}_profile.npy')
        
     seq_list_train_data = list(df_train_data['aa_seq'])
     dG_list_train_data = list(df_train_data['dG_ML'])
@@ -186,14 +184,12 @@ def train_model(model_save_path, trained_model_param=None, num_epochs=5, batch_s
     df_val_data            = pd.read_csv('../processed_data/csv/mega_val.csv')
     struct_list_val_data   = []
     mpnn_profile_val_data  = []
-    rosetta_score_val_data = []
 
     for name, wt_name in zip(df_val_data['name'], df_val_data['WT_name']):
         mutant_label = name.split('.pdb')[0] + name.split('.pdb')[1]
         label        = wt_name.split('.pdb')[0]
-        struct_list_val_data.append(f'../processed_data/mpnn_embed_data/{name}.pt')
-        rosetta_score_val_data.append(f'../processed_data/rosetta_respective_score_data/{name}.npy')
-        mpnn_profile_val_data.append(f'../processed_data/Mega_mt_profile_data/{name}_profile.npy')
+        struct_list_val_data.append(f'../processed_data/Mega_ProteinMPNN_node_rep/{name}.pt')
+        mpnn_profile_val_data.append(f'../processed_data/Mega_ProteinMPNN_output_profile/{name}_profile.npy')
 
     seq_list_val_data = list(df_val_data['aa_seq'])
     dG_list_val_data = list(df_val_data['dG_ML'])
@@ -326,8 +322,8 @@ def test_model(trained_model_param, ESM_size, batch_size=16):
     for name, wt_name in zip(df_test_data['name'], df_test_data['WT_name']):
         mutant_label = name.split('.pdb')[0] + name.split('.pdb')[1]
         label        = wt_name.split('.pdb')[0]
-        struct_list_test_data.append(f'../processed_data/mpnn_embed_data/{name}.pt')
-        mpnn_profile_test_data.append(f'../processed_data/Mega_mt_profile_data/{name}_profile.npy')
+        struct_list_test_data.append(f'../processed_data/Mega_ProteinMPNN_node_rep/{name}.pt')
+        mpnn_profile_test_data.append(f'../processed_data/Mega_ProteinMPNN_output_profile/{name}_profile.npy')
 
     seq_list_test_data = list(df_test_data['aa_seq'])
     dG_list_test_data = list(df_test_data['dG_ML'])
@@ -380,8 +376,8 @@ def pdb_id_to_dGmat(trained_model_param, ESM_size):
         if mut_type == 'wt': 
             mutant_label = name.split('.pdb')[0] + name.split('.pdb')[1]
             label = wt_name.split('.pdb')[0]
-            struct_list_val_data.append(f'../processed_data/mpnn_embed_data/{name}.pt')
-            mpnn_profile_val_data.append(f'../processed_data/Mega_mt_profile_data/{name}_profile.npy')
+            struct_list_val_data.append(f'../processed_data/Mega_ProteinMPNN_node_rep/{name}.pt')
+            mpnn_profile_val_data.append(f'../processed_data/Mega_ProteinMPNN_output_profile/{name}_profile.npy')
             seq_list_val_data.append(aa_seq)
             dG_list_val_data.append(dG)
             wt_names.append(name)
@@ -411,8 +407,8 @@ def test_model_with_Maxwell(trained_model_param, ESM_size, num_epochs=1, batch_s
     mpnn_profile_data  = []
     
     for protein_id in df['id']:
-        struct_list_data.append(glob.glob(f'../processed_data/maxwell_mpnn_embed_data/{protein_id}*.pt')[0])
-        mpnn_profile_data.append(glob.glob(f'../processed_data/maxwell2009_pdb_profile_data/{protein_id}*.npy')[0])
+        struct_list_data.append(glob.glob(f'../processed_data/Maxwell_ProteinMPNN_node_rep/{protein_id}*.pt')[0])
+        mpnn_profile_data.append(glob.glob(f'../processed_data/Maxwell_ProteinMPNN_output_profile/{protein_id}*.npy')[0])
 
     seq_list_data = list(df['sequence'])
     dG_list_data = [dG*0.239006 for dG in df['dg']] #Convert: [J/mol] -> [kcal/mol]

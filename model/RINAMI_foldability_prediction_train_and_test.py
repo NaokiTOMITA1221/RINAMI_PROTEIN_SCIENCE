@@ -266,11 +266,10 @@ def train_model(model_save_path, trained_model_param=None, num_epochs=5, batch_s
     # Loading training data  #
     ##########################
     df_train_data = pd.read_csv('../processed_data/csv/mega_train.csv')
-    struct_list_train_data, mpnn_profile_train_data, rosetta_score_train_data = [], [], []
+    struct_list_train_data, mpnn_profile_train_data = [], []
     for name, wt_name in zip(df_train_data['name'], df_train_data['WT_name']):
-        struct_list_train_data.append(f'../processed_data/mpnn_embed_data/{name}.pt')
-        rosetta_score_train_data.append(f'../processed_data/rosetta_respective_score_data/{name}.npy')
-        mpnn_profile_train_data.append(f'../processed_data/Mega_mt_profile_data/{name}_profile.npy')
+        struct_list_train_data.append(f'../processed_data/Mega_ProteinMPNN_node_rep/{name}.pt')
+        mpnn_profile_train_data.append(f'../processed_data/Mega_ProteinMPNN_output_profile/{name}_profile.npy')
     seq_list_train_data = list(df_train_data['aa_seq'])
     dG_list_train_data  = list(df_train_data['dG_ML'])
 
@@ -278,9 +277,8 @@ def train_model(model_save_path, trained_model_param=None, num_epochs=5, batch_s
     for (name, wt_name) in tqdm.tqdm(zip(df_train_data['name'], df_train_data['WT_name'])):
         name_  = name.replace('.pdb', '')
         aa_seq = decoy_to_seq_dict['decoy_'+name]
-        struct_list_train_data.append(f'../processed_data/Mega_mt_decoy_mpnn_embed_data/decoy_{name}.pt')
-        rosetta_score_train_data.append(f'../processed_data/Mega_mt_decoy_rosetta_respective_score_data/decoy_{name_}.npy')
-        mpnn_profile_train_data.append(f'../processed_data/Mega_mt_decoy_profile_data/decoy_{name}_profile.npy')
+        struct_list_train_data.append(f'../processed_data/Mega_decoy_ProteinMPNN_node_rep/decoy_{name}.pt')
+        mpnn_profile_train_data.append(f'../processed_data/Mega_decoy_ProteinMPNN_output_profile/decoy_{name}_profile.npy')
         seq_list_train_data.append(aa_seq)
         dG_list_train_data.append(-1)  # デコイは負扱い（<=0）
 
@@ -288,20 +286,18 @@ def train_model(model_save_path, trained_model_param=None, num_epochs=5, batch_s
     # Loading validation data  #
     ############################
     df_val_data = pd.read_csv('../processed_data/csv/mega_val.csv')
-    struct_list_val_data, mpnn_profile_val_data, rosetta_score_val_data = [], [], []
+    struct_list_val_data, mpnn_profile_val_data = [], []
     print('decoy data loading for validation...')
     for (name, wt_name) in tqdm.tqdm(zip(df_val_data['name'], df_val_data['WT_name'])):
-        struct_list_val_data.append(f'../processed_data/mpnn_embed_data/{name}.pt')
-        rosetta_score_val_data.append(f'../processed_data/rosetta_respective_score_data/{name}.npy')
-        mpnn_profile_val_data.append(f'../processed_data/Mega_mt_profile_data/{name}_profile.npy')
+        struct_list_val_data.append(f'../processed_data/Mega_ProteinMPNN_node_rep/{name}.pt')
+        mpnn_profile_val_data.append(f'../processed_data/Mega_ProteinMPNN_output_profile/{name}_profile.npy')
     seq_list_val_data = list(df_val_data['aa_seq'])
     dG_list_val_data  = list(df_val_data['dG_ML'])
     for name, wt_name in zip(df_val_data['name'], df_val_data['WT_name']):
         name_  = name.replace('.pdb', '')
         aa_seq = decoy_to_seq_dict['decoy_'+name]
-        struct_list_val_data.append(f'../processed_data/Mega_mt_decoy_mpnn_embed_data/decoy_{name}.pt')
-        rosetta_score_val_data.append(f'../processed_data/Mega_mt_decoy_rosetta_respective_score_data/decoy_{name_}.npy')
-        mpnn_profile_val_data.append(f'../processed_data/Mega_mt_decoy_profile_data/decoy_{name}_profile.npy')
+        struct_list_val_data.append(f'../processed_data/Mega_decoy_ProteinMPNN_node_rep/decoy_{name}.pt')
+        mpnn_profile_val_data.append(f'../processed_data/Mega_decoy_ProteinMPNN_output_profile/decoy_{name}_profile.npy')
         seq_list_val_data.append(aa_seq)
         dG_list_val_data.append(-1)
 
@@ -468,7 +464,7 @@ def train_model(model_save_path, trained_model_param=None, num_epochs=5, batch_s
 
 def test_model_with_Rocklin_benchmark_set(trained_model_param, ESM_size, num_epochs=1, batch_size=1, lr=3e-5, dropout=0., pth_ind=None, threshold = 0.5, seq_len_threshold=300):
     header_to_label = {}
-    for line in open('../processed_data/fasta/Rocklin_zero_shot_CD_measured.fasta'):
+    for line in open('../processed_data/fasta/Garcia_benchmark_CD_measured.fasta'):
         if '>' in line:
             label = line.replace('>', '').strip().split('_')[-1]
             header = line.replace('>', '').strip().replace(label, '')[:-1]
@@ -481,12 +477,12 @@ def test_model_with_Rocklin_benchmark_set(trained_model_param, ESM_size, num_epo
     seq_list_val_data      = []
         
     ##load csv data
-    df = pd.read_csv('../processed_data/csv/Rocklin_zero_shot.csv')
+    df = pd.read_csv('../processed_data/csv/Garcia_benchmark.csv')
     benchmark_data_dict = {}
     for name, AF_pLDDT_3rec, AF_pLDDT_25rec, ESMFold_pLDDT, MPNN_score, AF_PAE in zip(df['Name'], df['AlphaFold_pLDDT3recycles'], df['AlphaFold_pLDDT25recycles'], df['ESMFold_pLDDT'], df['MPNN_score'], df['AlphaFold_PAE']):
         benchmark_data_dict[name] = {'AF_pLDDT_3rec':AF_pLDDT_3rec, 'AF_pLDDT_25rec':AF_pLDDT_25rec, 'ESMFold_pLDDT':ESMFold_pLDDT, 'MPNN_score':MPNN_score, 'AF_PAE':AF_PAE}
     #load Rocklin_dG_by_ESM_IF
-    Rocklin_dG_by_ESM_IF_dict = json.load(open('../processed_data/likelihood_data/Rocklin_benchmark.json'))
+    Rocklin_dG_by_ESM_IF_dict = json.load(open('../processed_data/likelihood_data/Garcia_benchmark.json'))
 
     ##0th factor is the foldability-label (: 0 or 1).
     AF_pLDDT_3rec_and_label    = [[], []]
@@ -497,7 +493,7 @@ def test_model_with_Rocklin_benchmark_set(trained_model_param, ESM_size, num_epo
     regression_score_and_label = [[], []]
 
 
-    for pdb in glob.glob('../processed_data/Rocklin_zero_shot_pdb/*.pdb'):
+    for pdb in glob.glob('../processed_data/Garcia_benchmark_predicted_structure_pdb/*.pdb'):
         seq    = get_sequence_from_single_chain_pdb(pdb)
         if len(seq)>seq_len_threshold:
             continue
@@ -532,8 +528,8 @@ def test_model_with_Rocklin_benchmark_set(trained_model_param, ESM_size, num_epo
         regression_score_and_label[1].append(regression_score)
 
         foldability_label_val_data.append(foldability_label)
-        struct_list_val_data.append(glob.glob(f'../processed_data/Rocklin_zero_shot_mpnn_embed_data/{name}*.pt')[0])
-        mpnn_profile_val_data.append(glob.glob(f'../processed_data/Rocklin_zero_shot_profile_data/{name}*.npy')[0])
+        struct_list_val_data.append(glob.glob(f'../processed_data/Garcia_benchmark_ProteinMPNN_node_rep/{name}*.pt')[0])
+        mpnn_profile_val_data.append(glob.glob(f'../processed_data/Garcia_benchmark_ProteinMPNN_output_profile/{name}*.npy')[0])
         seq_list_val_data.append(seq)
     
     model = RINAMI( ESM_size=ESM_size).to(device)
@@ -638,7 +634,7 @@ if __name__ == "__main__":
         test_mode          = args[-1]
 
         if test_mode == 'Garcia_benchmark':
-            print('Test mode: Rocklin_benchmark_test')
+            print('Test mode: Garcia_benchmark_test')
             seq_len_threshold_list =  [80, 130, 180, 230]
             ROC_AUC_list                  = []
             auc_roc_AF_pLDDT_3rec_list    = []
@@ -674,5 +670,5 @@ if __name__ == "__main__":
             plt.xticks(seq_len_threshold_list, [f'{seq_len_threshold}\n ({tpc} : {tnc})' for seq_len_threshold, tpc, tnc in zip(seq_len_threshold_list, true_pos_num_list, true_neg_num_list)])
 
             sns.despine()
-            plt.savefig('Trained_model_Rocklin_benchmark_result.png', bbox_inches='tight', dpi=300)
-            plt.savefig('Trained_model_Rocklin_benchmark_result.pdf', bbox_inches='tight', dpi=300)
+            plt.savefig('Trained_model_Garcia_benchmark_result.png', bbox_inches='tight', dpi=300)
+            plt.savefig('Trained_model_Garcia_benchmark_result.pdf', bbox_inches='tight', dpi=300)
