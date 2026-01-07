@@ -46,11 +46,10 @@ class PDBGraphBuilder:
         _, mpnn_embed, _ = self.protein_mpnn(X, S, mask, chain_M, residue_idx, chain_encoding_all, None)
             
 
-        torch.save(mpnn_embed['h_V'], f"../processed_data/Ikeda_SSP_and_Variants_ProteinMPNN_node_rep/{name}.pt")
+        torch.save(mpnn_embed['h_V'], f"../processed_data/temp_ProteinMPNN_node_rep/{name}.pt")
 
 if __name__ == "__main__":
-    sb.call('mkdir -p ../processed_data/Ikeda_SSP_and_Variants_mpnn_embed_data', shell=True)
-    pdbs = glob.glob('../processed_data/Ikeda_SSP_and_Variants_pdb/*.pdb')
+    pdbs = glob.glob('../processed_data/input_pdb/*.pdb')
     builder = PDBGraphBuilder(device="cpu")
     for pdb in tqdm.tqdm(pdbs):
         builder.build_graph_from_pdb(pdb)

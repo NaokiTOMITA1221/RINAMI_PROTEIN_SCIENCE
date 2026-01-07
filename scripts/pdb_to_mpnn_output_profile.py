@@ -64,21 +64,20 @@ import numpy as np
 import tqdm
 import subprocess as sb
 #########################
-sb.call(f'mkdir ../processed_data/Ikeda_SSP_and_Variants_ProteinMPNN_output_profile', shell=True)
-uniprot_IDs = []
-for pdb in glob.glob('../processed_data/Ikeda_SSP_and_Variants_pdb/*.pdb'):
-    uniprot_IDs.append(pdb.split('/')[-1][:-4])
+input_data_IDs = []
+for pdb in glob.glob('../processed_data/input_pdb/*.pdb'):
+    input_data_IDs.append(pdb.split('/')[-1][:-4])
 
 done_IDs = []
-generated_profile = glob.glob('../processed_data/Ikeda_SSP_and_Variants_ProteinMPNN_output_profile/*_profile.npy')
+generated_profile = glob.glob('../processed_data/temp_ProteinMPNN_output_profile/*_profile.npy')
 for profile in generated_profile:
   done_IDs.append(profile.split('/')[-1].split('_profile.npy')[0])
 
-uniprot_IDs = list(set(uniprot_IDs) - set(done_IDs))
+input_data_IDs = list(set(input_data_IDs) - set(done_IDs))
 
-for ID in tqdm.tqdm(uniprot_IDs):
+for ID in tqdm.tqdm(input_data_IDs):
     try:
-      pdb_path = glob.glob(f'../processed_data/Ikeda_SSP_and_Variants_pdb/{ID}.pdb')[0]
+      pdb_path = glob.glob(f'../processed_data/input_pdb/{ID}.pdb')[0]
       homomer = True #@param {type:"boolean"}
       designed_chain = "A" #@param {type:"string"}
       fixed_chain = "" #@param {type:"string"}
@@ -179,7 +178,7 @@ for ID in tqdm.tqdm(uniprot_IDs):
 
           randn_1 = torch.randn(chain_M.shape, device=X.device)
           log_probs = model(X, S, mask, chain_M*chain_M_pos, residue_idx, chain_encoding_all, randn_1) #こいつが構造を読んだ後のプロファイルに相当するのでは？
-          np.save(f'../processed_data/Ikeda_SSP_and_Variants_ProteinMPNN_output_profile/{ID}_profile.npy', np.exp( log_probs.to('cpu').detach().numpy().copy() )[0, :, :20].T )
+          np.save(f'../processed_data/temp_ProteinMPNN_output_profile/{ID}_profile.npy', np.exp( log_probs.to('cpu').detach().numpy().copy() )[0, :, :20].T )
     except Exception as e:
       print(f"Error processing {ID}: {e}")
 
