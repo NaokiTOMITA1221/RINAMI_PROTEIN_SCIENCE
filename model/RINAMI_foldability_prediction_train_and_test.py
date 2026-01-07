@@ -612,7 +612,7 @@ def test_model_with_Rocklin_benchmark_set(trained_model_param, ESM_size, num_epo
 
 if __name__ == "__main__":
    """
-    Testing  : python3 RINAMI_foldability_prediction_train_and_test.py <model param path> <test mode: "Mega_test", "Maxwell_test", "Garcia_benchmark">
+    Testing  : python3 RINAMI_foldability_prediction_train_and_test.py test_mode <model param path> <test set: "Mega_test", "Maxwell_test", "Garcia_benchmark">
    """
    args = sys.argv
 
