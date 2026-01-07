@@ -1,3 +1,4 @@
+import torch
 import subprocess as sb
 import sys
 from pathlib import Path
@@ -15,10 +16,10 @@ model_param    = '../pth/RINAMI_best_param.pth'
 sb.call('mkdir -p ../processed_data/input_pdb', shell=True)
 sb.call('mkdir -p ../processed_data/temp_ProteinMPNN_output_profile', shell=True)
 sb.call('mkdir -p ../processed_data/temp_ProteinMPNN_node_rep', shell=True)
-sb.call(f'cp {input_pdb_path} ../processed_data/input_pdb')
+sb.call(f'cp {input_pdb_path} ../processed_data/input_pdb', shell=True)
 
 model = RINAMI( ESM_size=320 ).to(device)
-model.load_state_dict(torch.load(model_params))
+model.load_state_dict(torch.load(model_param))
 model.eval()
 
 sb.call('python ./pdb_to_mpnn_node_rep.py', shell=True)

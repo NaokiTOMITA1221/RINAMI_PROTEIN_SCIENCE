@@ -1,3 +1,9 @@
+from pathlib import Path
+import sys
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(SCRIPT_DIR / "ProteinMPNN_to_get_emb"))
+
 import json, time, os, sys, glob
 
 if not os.path.isdir("ProteinMPNN"):
