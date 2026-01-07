@@ -7,7 +7,7 @@
     - GPU: NVIDIA GeForce RTX 3080 (10GB)
 
 
-Because of the data-size limitation, we put the all data used for model training and testing on the Zenodo strage: https://zenodo.org/records/18171296?preview=1&token=eyJhbGciOiJIUzUxMiJ9.eyJpZCI6IjBlNDU2Y2IzLWYzZGMtNGFhMy04ODk4LTZjYjVhODJkMDhjMCIsImRhdGEiOnt9LCJyYW5kb20iOiJkZGU2ZGMzMDU3ZjJhMGNhNzRjMWNlMjMxOGI3NWMyZCJ9.0PeEYd5-3wrL2Tvy74iufNJivvQt0wXq6XDvkR4Ne17KFRIuuxmLCyZkRRftI5DFbLWXWMRl35-6Rrmay89iGw
+Because of the data-size limitation, we put the all data used for model training and testing on the Zenodo strage: (Strage URL)
 
 
 # Building an execution environment
