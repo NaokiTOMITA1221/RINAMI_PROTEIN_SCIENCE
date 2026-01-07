@@ -34,4 +34,4 @@ Creation of the environment:
 
 # Usage of RINAMI
 
-    python run_inferrence.py [your_pdb_path] [output_path]
+    python ./scripts/run_inferrence.py [your_pdb_path] [output_path]
