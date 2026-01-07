@@ -1,25 +1,44 @@
 name: RINAMI_env
 channels:
+  - pytorch
+  - nvidia
   - conda-forge
+  - defaults
+
 dependencies:
   - python=3.10
   - pip
 
-  # --- core scientific stack ---
+  # --- PyTorch (GPU) ---
+  - pytorch=2.4.0
+  - pytorch-cuda=12.1
+  - torchvision
+  - torchaudio
+
+  # --- Scientific stack (condaで揃える) ---
   - numpy
-  - pandas
   - scipy
+  - pandas
   - scikit-learn
-  - tqdm
-
-  # --- bio ---
+  - matplotlib-base
+  - seaborn
   - biopython
+  - pyyaml
 
-  # --- pip-managed (GPU-capable) ---
+  # あると便利
+  - tqdm
+  - requests
+
   - pip:
-      # ESM
-      - fair-esm
+      # --- HuggingFace / ESM ---
+      - transformers==4.57.3
+      - accelerate==1.12.0
+      - huggingface-hub==0.36.0
+      - tokenizers==0.22.2
+      - safetensors==0.7.0
+      - sentencepiece==0.2.1
+      - fair-esm==2.0.0
 
-      # utilities
-      - einops
+      # --- torch-geometric (本体だけ) ---
+      - torch-geometric==2.7.0
 
