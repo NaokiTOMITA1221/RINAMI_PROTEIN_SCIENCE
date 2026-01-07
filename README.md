@@ -36,4 +36,5 @@ Creation of the environment:
 
     cd scripts
     python run_inference.py [your_pdb_path]
+    
 
