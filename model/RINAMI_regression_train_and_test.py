@@ -4,14 +4,12 @@ import torch.nn.functional as F
 import pandas as pd
 import tqdm
 import layers
-from util import batch_maker, batch_maker_for_inputs, aa_sequences_to_padded_onehot, pad_feature_matrices
+from util import batch_maker_for_inputs, aa_sequences_to_padded_onehot, pad_feature_matrices
 import gc
-from torch.optim.lr_scheduler import CosineAnnealingLR
 from transformers import get_cosine_schedule_with_warmup
 import numpy as np
 import torch.nn.functional as F
 import json
-from torch.nn.utils.rnn import pad_sequence
 import glob
 import sys
 import math

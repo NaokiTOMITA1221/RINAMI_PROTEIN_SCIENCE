@@ -55,34 +55,7 @@ def create_padded_positional_encodings(pe: PositionalEncoding, lengths: list[int
 
     return padded_tensor, mask
 
-############################################
-# Encoding PDB with pretrained proteinMPNN #
-############################################
-class PDBGraphEncoder(nn.Module):
-    def __init__(self, emb_dim=128, max_len=1000, device=device):
-        super().__init__()
-        self.device = device
-        self.emb_dim = emb_dim
-        self.pos_encoder = PositionalEncoding(emb_dim, max_len)
 
-    def forward(self, proteinMPNN_emb_path_list):
-        mpnn_embed_tensors = []
-
-        for path in proteinMPNN_emb_path_list:
-            emb = torch.load(path, map_location='cpu', weights_only=False)
-            emb = emb + self.pos_encoder(torch.tensor(range(emb.shape[-2]))).to('cpu')
-            mpnn_embed_tensors.append(emb)
-            
-        # パディングして [batch, max_seq_len, emb_dim] のテンソルにする
-        padded_batch = pad_sequence(mpnn_embed_tensors, batch_first=True)
-
-        # マスク（パディングされていない部分をTrueに）
-        mask = torch.zeros(padded_batch.shape[:2], dtype=torch.bool)
-        for i, tensor in enumerate(mpnn_embed_tensors):
-            mask[i, :tensor.size(0)] = True
-
-
-        return padded_batch.to(self.device), mask.to(self.device)
 
 
 
@@ -260,98 +233,6 @@ class MLP(nn.Module):
 
 
 
-##############################################
-# shuffle and batchfying the training datas  #
-##############################################
-def batch_maker(aa___seq_list, base_seq_list, dG_list, batch_size=10, random_shuffle=True):
-    zip_list   = list(zip(aa___seq_list, base_seq_list, dG_list))
-    batch_list = []
-    if random_shuffle:
-        random.shuffle(zip_list)
-    for batch_ind in range(int(len(aa___seq_list)/batch_size)):
-        aa___seq_batch = []
-        base_seq_batch = []
-        dG_batch = []
-        for data in zip_list[batch_ind*batch_size:(batch_ind+1)*batch_size]:
-            aa___seq, base_seq, dG_data = data[0], data[1], data[2]
-            aa___seq_batch.append(aa___seq)
-            base_seq_batch.append(base_seq)
-            dG_batch.append(dG_data)
-        batch_list.append([aa___seq_batch, base_seq_batch, dG_batch])
-    return batch_list
 
-def sinusoidal_positional_encoding(input_array: np.ndarray) -> np.ndarray:
-    seq_len, dim = input_array.shape
-
-    # 位置の配列: shape = (seq_len, 1)
-    position = np.arange(seq_len)[:, np.newaxis]
-    # 周波数スケール: shape = (1, dim)
-    div_term = np.exp(np.arange(0, dim, 2) * -(np.log(10000.0) / dim))
-
-    # PEの初期化
-    pe = np.zeros((seq_len, dim))
-    pe[:, 0::2] = np.sin(position * div_term)
-    pe[:, 1::2] = np.cos(position * div_term)
-
-    return pe
                                   
 
-#########################
-# GCN layer             #
-#########################
-
-class GCN(nn.Module):
-    def __init__(self, n_in, n_h, n_out, dropout=0.1):
-        super().__init__()
-        self.n_in = n_in
-        self.n_h  = n_h
-        self.n_out = n_out
-
-        self.norm1 = nn.LayerNorm(self.n_in)
-        self.norm2 = nn.LayerNorm(self.n_h)
-        self.conv1 = GCNConv(self.n_h, self.n_h)
-        self.dropout1 = nn.Dropout(dropout)
-        self.conv2 = GCNConv(self.n_h, self.n_h) 
-        self.dropout2 = nn.Dropout(dropout)
-        self.mlp1 = MLPNet(self.n_in, self.n_h, dropout=dropout)
-        self.mlp_skip = MLPNet(self.n_in, self.n_out, dropout=dropout)
-        self.mlp2 = MLPNet(self.n_h, self.n_out, dropout=dropout)
-        self.relu = nn.GELU()
-
-    def forward(self, data):
-        x = self.norm1(data.x)
-        x_copy = data.x
-        edge_index = data.edge_index
-        
-        x = self.mlp1(x)
-        x = self.conv1(x, edge_index)
-        x = self.dropout1(x)
-        x = self.relu(x) 
-
-        y = self.conv2(x, edge_index) 
-        y = self.dropout2(y)
-        y = self.norm2(self.relu(y))
-        y = self.mlp2(y)
-
-        z = self.mlp_skip(x_copy) + y
-        
-        return z
-
-
-class NNconv(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.edge_attr_dim = 128
-        self.node_in_dim   = 128
-        self.hidden_dim    = 128
-        self.out_dim       = 128
-
-        self.edge_net = MLPNet(128, self.node_in_dim*self.out_dim)
-        self.conv = NNConv(self.node_in_dim, self.out_dim, self.edge_net, aggr='mean')
-        self.act = nn.GELU()
-
-    def forward(self, x, edge_index, edge_attr):
-        x_copy = x
-        x = self.conv(x, edge_index, edge_attr)
-        x = x_copy + self.act(x)
-        return x
