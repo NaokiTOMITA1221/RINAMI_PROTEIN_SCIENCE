@@ -366,30 +366,28 @@ def pdb_id_to_dGmat(trained_model_param, ESM_size):
     struct_list_data   = []
     mpnn_profile_data  = []
     seq_list_data      = []
-    dG_list_data       = []
     wt_names           = []
 
     for name, wt_name, mut_type, aa_seq, dG in zip(df['name'], df['WT_name'], df['mut_type'], df['aa_seq'], df['dG_ML']):
         if mut_type == 'wt': 
             mutant_label = name.split('.pdb')[0] + name.split('.pdb')[1]
             label = wt_name.split('.pdb')[0]
-            struct_list_val_data.append(f'../processed_data/Mega_ProteinMPNN_node_rep/{name}.pt')
-            mpnn_profile_val_data.append(f'../processed_data/Mega_ProteinMPNN_output_profile/{name}_profile.npy')
-            seq_list_val_data.append(aa_seq)
-            dG_list_val_data.append(dG)
+            struct_list_data.append(f'../processed_data/Mega_ProteinMPNN_node_rep/{name}.pt')
+            mpnn_profile_data.append(f'../processed_data/Mega_ProteinMPNN_output_profile/{name}_profile.npy')
+            seq_list_data.append(aa_seq)
             wt_names.append(name)
 
     model = RINAMI( ESM_size=ESM_size).to(device)
     model.load_state_dict(torch.load(trained_model_param))
     
-    batch_list = batch_maker_for_inputs(seq_list_data, struct_list_data, mpnn_profile_data, dG_list_data, wt_names)
+    batch_list = batch_maker_for_inputs(seq_list_data, struct_list_data, mpnn_profile_data, wt_names, batch_size=1)
     
     with torch.no_grad():
         for batch in tqdm.tqdm(batch_list):
             aa_seq_batch   = batch[0]
             struct_batch   = batch[1]
             profile_batch  = batch[2]
-            wt_names_batch = batch[4]
+            wt_names_batch = batch[3]
             dG_mat         = model(aa_seq_batch, struct_batch, profile_batch, mat_return=True).to('cpu')[0].numpy()
             wt_name        = wt_names_batch[0]
             np.save(f'../processed_data/wt_dG_mat/{wt_name}_res_wise_dG.npy', dG_mat)
@@ -476,5 +474,5 @@ if __name__ == "__main__":
             test_model_with_Maxwell(trained_model_path, ESM_size=ESM_dim)
         elif test_mode == 'res_AA_wise_dG_mat':
             print('Extracting residue-amino-acid-wise dG matrics')
-            pdb_id_to_dGmat(trained_model_path, ESM_size)
+            pdb_id_to_dGmat(trained_model_path, ESM_size=ESM_dim)
 
