@@ -82,41 +82,42 @@ def parse_PDB_biounits(x, atoms=['N','CA','C'], chain=None):
     return ["".join([aa_N_1.get(a,"-") for a in y]) for y in x]
 
   xyz,seq,min_resn,max_resn = {},{},1e6,-1e6
-  for line in open(x,"rb"):
-    line = line.decode("utf-8","ignore").rstrip()
+  with open(x, "rb") as f:
+    for line in f:
+        line = line.decode("utf-8","ignore").rstrip()
 
-    if line[:6] == "HETATM" and line[17:17+3] == "MSE":
-      line = line.replace("HETATM","ATOM  ")
-      line = line.replace("MSE","MET")
+        if line[:6] == "HETATM" and line[17:17+3] == "MSE":
+          line = line.replace("HETATM","ATOM  ")
+          line = line.replace("MSE","MET")
 
-    if line[:4] == "ATOM":
-      ch = line[21:22]
-      if ch == chain or chain is None:
-        atom = line[12:12+4].strip()
-        resi = line[17:17+3]
-        resn = line[22:22+5].strip()
-        x,y,z = [float(line[i:(i+8)]) for i in [30,38,46]]
+        if line[:4] == "ATOM":
+          ch = line[21:22]
+          if ch == chain or chain is None:
+            atom = line[12:12+4].strip()
+            resi = line[17:17+3]
+            resn = line[22:22+5].strip()
+            x,y,z = [float(line[i:(i+8)]) for i in [30,38,46]]
 
-        if resn[-1].isalpha(): 
-            resa,resn = resn[-1],int(resn[:-1])-1
-        else: 
-            resa,resn = "",int(resn)-1
-#         resn = int(resn)
-        if resn < min_resn: 
-            min_resn = resn
-        if resn > max_resn: 
-            max_resn = resn
-        if resn not in xyz: 
-            xyz[resn] = {}
-        if resa not in xyz[resn]: 
-            xyz[resn][resa] = {}
-        if resn not in seq: 
-            seq[resn] = {}
-        if resa not in seq[resn]: 
-            seq[resn][resa] = resi
+            if resn[-1].isalpha():
+                resa,resn = resn[-1],int(resn[:-1])-1
+            else:
+                resa,resn = "",int(resn)-1
+    #         resn = int(resn)
+            if resn < min_resn:
+                min_resn = resn
+            if resn > max_resn:
+                max_resn = resn
+            if resn not in xyz:
+                xyz[resn] = {}
+            if resa not in xyz[resn]:
+                xyz[resn][resa] = {}
+            if resn not in seq:
+                seq[resn] = {}
+            if resa not in seq[resn]:
+                seq[resn][resa] = resi
 
-        if atom not in xyz[resn][resa]:
-          xyz[resn][resa][atom] = np.array([x,y,z])
+            if atom not in xyz[resn][resa]:
+              xyz[resn][resa][atom] = np.array([x,y,z])
 
   # convert to numpy arrays, fill in missing values
   seq_,xyz_ = [],[]

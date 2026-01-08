@@ -22,8 +22,8 @@ model = RINAMI( ESM_size=320 ).to(device)
 model.load_state_dict(torch.load(model_param))
 model.eval()
 
-sb.call('python ./pdb_to_mpnn_node_rep.py', shell=True)
-sb.call('python ./pdb_to_mpnn_output_profile.py', shell=True)
+sb.call('python ./pdb_to_mpnn_node_rep.py ../processed_data/input_pdb ../processed_data/temp_ProteinMPNN_node_rep', shell=True)
+sb.call('python ./pdb_to_mpnn_output_profile.py ../processed_data/input_pdb ../processed_data/temp_ProteinMPNN_output_profile', shell=True)
 
 input_data_name = input_pdb_path.split('/')[-1][:-4]
 aa_seq                          = get_sequence_from_single_chain_pdb(input_pdb_path)

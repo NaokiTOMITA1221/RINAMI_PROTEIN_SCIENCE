@@ -1,193 +1,242 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
 from pathlib import Path
+import argparse
+import copy
+import glob
+import os
+import re
 import sys
-
-SCRIPT_DIR = Path(__file__).resolve().parent
-sys.path.insert(0, str(SCRIPT_DIR / "ProteinMPNN_to_get_emb"))
-
-import json, time, os, sys, glob
-
-if not os.path.isdir("ProteinMPNN"):
-  os.system("git clone -q https://github.com/dauparas/ProteinMPNN.git")
-sys.path.append('ProteinMPNN')
-
-import shutil
 import warnings
+
 import numpy as np
 import torch
-from torch import optim
-from torch.utils.data import DataLoader
-from torch.utils.data.dataset import random_split, Subset
-import copy
-import torch.nn as nn
-import torch.nn.functional as F
-import random
-import os.path
-from protein_mpnn_utils_to_get_emb import loss_nll, loss_smoothed, gather_edges, gather_nodes, gather_nodes_t, cat_neighbors_nodes, _scores, _S_to_seq, tied_featurize, parse_PDB
-from protein_mpnn_utils_to_get_emb import StructureDataset, StructureDatasetPDB, ProteinMPNN
-
-device = torch.device("cuda" if (torch.cuda.is_available()) else "cpu")
-#v_48_010=version with 48 edges 0.10A noise
-model_name = "v_48_020" #@param ["v_48_002", "v_48_010", "v_48_020", "v_48_030"]
+import tqdm
 
 
-backbone_noise=0.00               # Standard deviation of Gaussian noise to add to backbone atoms
+def _add_local_paths(script_dir: Path) -> None:
+    # scripts/ProteinMPNN_to_get_emb を最優先で import できるようにする
+    sys.path.insert(0, str(script_dir / "ProteinMPNN_to_get_emb"))
+    
+    '''
+    # ProteinMPNN 本体（scripts/ProteinMPNN が無ければ clone）
+    if not (script_dir / "ProteinMPNN").is_dir():
+        os.system("git clone -q https://github.com/dauparas/ProteinMPNN.git " + str(script_dir / "ProteinMPNN"))
+    sys.path.append(str(script_dir / "ProteinMPNN"))
+    '''
 
-path_to_model_weights='ProteinMPNN/vanilla_model_weights'
-hidden_dim = 128
-num_layers = 3
-model_folder_path = path_to_model_weights
-if model_folder_path[-1] != '/':
-    model_folder_path = model_folder_path + '/'
-checkpoint_path = model_folder_path + f'{model_name}.pt'
+def _load_model(
+    script_dir: Path,
+    device: torch.device,
+    model_name: str,
+    backbone_noise: float,
+    hidden_dim: int,
+    num_layers: int,
+) -> torch.nn.Module:
+    from protein_mpnn_utils_to_get_emb import ProteinMPNN  # type: ignore
 
-checkpoint = torch.load(checkpoint_path, map_location=device)
-print('Number of edges:', checkpoint['num_edges'])
-noise_level_print = checkpoint['noise_level']
-print(f'Training noise level: {noise_level_print}A')
-model = ProteinMPNN(num_letters=21, node_features=hidden_dim, edge_features=hidden_dim, hidden_dim=hidden_dim, num_encoder_layers=num_layers, num_decoder_layers=num_layers, augment_eps=backbone_noise, k_neighbors=checkpoint['num_edges'])
-model.to(device)
-model.load_state_dict(checkpoint['model_state_dict'])
-model.eval()
-print("Model loaded")
+    weights_dir = script_dir / "ProteinMPNN_to_get_emb" / "vanilla_model_weights"
+    checkpoint_path = weights_dir / f"{model_name}.pt"
+
+    checkpoint = torch.load(checkpoint_path, map_location=device)
+    print("Number of edges:", checkpoint["num_edges"])
+    print(f"Training noise level: {checkpoint['noise_level']}A")
+
+    model = ProteinMPNN(
+        num_letters=21,
+        node_features=hidden_dim,
+        edge_features=hidden_dim,
+        hidden_dim=hidden_dim,
+        num_encoder_layers=num_layers,
+        num_decoder_layers=num_layers,
+        augment_eps=backbone_noise,
+        k_neighbors=checkpoint["num_edges"],
+    ).to(device)
+
+    model.load_state_dict(checkpoint["model_state_dict"])
+    model.eval()
+    print("Model loaded")
+    return model
+
 
 def make_tied_positions_for_homomers(pdb_dict_list):
     my_dict = {}
     for result in pdb_dict_list:
-        all_chain_list = sorted([item[-1:] for item in list(result) if item[:9]=='seq_chain']) #A, B, C, ...
+        all_chain_list = sorted([item[-1:] for item in list(result) if item[:9] == "seq_chain"])
         tied_positions_list = []
         chain_length = len(result[f"seq_chain_{all_chain_list[0]}"])
-        for i in range(1,chain_length+1):
+        for i in range(1, chain_length + 1):
             temp_dict = {}
-            for j, chain in enumerate(all_chain_list):
-                temp_dict[chain] = [i] #needs to be a list
+            for chain in all_chain_list:
+                temp_dict[chain] = [i]
             tied_positions_list.append(temp_dict)
-        my_dict[result['name']] = tied_positions_list
+        my_dict[result["name"]] = tied_positions_list
     return my_dict
 
 
-import re
-import numpy as np
-import tqdm
-import subprocess as sb
-#########################
-input_data_IDs = []
-for pdb in glob.glob('../processed_data/input_pdb/*.pdb'):
-    input_data_IDs.append(pdb.split('/')[-1][:-4])
+@torch.no_grad()
+def compute_profile_for_pdb(
+    pdb_path: Path,
+    model: torch.nn.Module,
+    device: torch.device,
+    homomer: bool = True,
+    designed_chain: str = "A",
+    fixed_chain: str = "",
+    max_length: int = 20000,
+    sampling_temp: str = "0.1",
+    batch_size: int = 1,
+) -> np.ndarray:
+    """
+    Returns:
+        profile: np.ndarray shape (20, L)  (元コードと同じ: exp(log_probs)[0,:,:20].T)
+    """
+    from protein_mpnn_utils_to_get_emb import parse_PDB, StructureDatasetPDB, tied_featurize  # type: ignore
 
-done_IDs = []
-generated_profile = glob.glob('../processed_data/temp_ProteinMPNN_output_profile/*_profile.npy')
-for profile in generated_profile:
-  done_IDs.append(profile.split('/')[-1].split('_profile.npy')[0])
-
-input_data_IDs = list(set(input_data_IDs) - set(done_IDs))
-
-for ID in tqdm.tqdm(input_data_IDs):
-    try:
-      pdb_path = glob.glob(f'../processed_data/input_pdb/{ID}.pdb')[0]
-      homomer = True #@param {type:"boolean"}
-      designed_chain = "A" #@param {type:"string"}
-      fixed_chain = "" #@param {type:"string"}
-
-      if designed_chain == "":
+    if designed_chain == "":
         designed_chain_list = []
-      else:
-        designed_chain_list = re.sub("[^A-Za-z]+",",", designed_chain).split(",")
+    else:
+        designed_chain_list = re.sub("[^A-Za-z]+", ",", designed_chain).split(",")
 
-      if fixed_chain == "":
+    if fixed_chain == "":
         fixed_chain_list = []
-      else:
-        fixed_chain_list = re.sub("[^A-Za-z]+",",", fixed_chain).split(",")
+    else:
+        fixed_chain_list = re.sub("[^A-Za-z]+", ",", fixed_chain).split(",")
 
-      chain_list = list(set(designed_chain_list + fixed_chain_list))
+    chain_list = list(set(designed_chain_list + fixed_chain_list))
 
-      #@markdown - specified which chain(s) to design and which chain(s) to keep fixed.
-      #@markdown   Use comma:`A,B` to specifiy more than one chain
+    # ここは元コードと同じ流れ
+    pdb_dict_list = parse_PDB(str(pdb_path), input_chain_list=chain_list)
+    dataset_valid = StructureDatasetPDB(pdb_dict_list, truncate=None, max_length=max_length)
 
-      #chain = "A" #@param {type:"string"}
-      #pdb_path_chains = chain
-      ##@markdown - Define which chain to redesign
+    chain_id_dict = {pdb_dict_list[0]["name"]: (designed_chain_list, fixed_chain_list)}
+    fixed_positions_dict = None
+    pssm_dict = None
+    omit_AA_dict = None
+    bias_by_res_dict = None
 
-      #@markdown ### Design Options
-      num_seqs = 1 #@param ["1", "2", "4", "8", "16", "32", "64"] {type:"raw"}
-      num_seq_per_target = num_seqs
+    tied_positions_dict = make_tied_positions_for_homomers(pdb_dict_list) if homomer else None
 
-      #@markdown - Sampling temperature for amino acids, T=0.0 means taking argmax, T>>1.0 means sample randomly.
-      sampling_temp = "0.1" #@param ["0.0001", "0.1", "0.15", "0.2", "0.25", "0.3", "0.5"]
+    # dataset_valid は通常 1 要素（その pdb）なので 1 回だけ回る想定
+    for protein in dataset_valid:
+        batch_clones = [copy.deepcopy(protein) for _ in range(batch_size)]
 
+        (
+            X,
+            S,
+            mask,
+            lengths,
+            chain_M,
+            chain_encoding_all,
+            chain_list_list,
+            visible_list_list,
+            masked_list_list,
+            masked_chain_length_list_list,
+            chain_M_pos,
+            omit_AA_mask,
+            residue_idx,
+            dihedral_mask,
+            tied_pos_list_of_lists_list,
+            pssm_coef,
+            pssm_bias,
+            pssm_log_odds_all,
+            bias_by_res_all,
+            tied_beta,
+        ) = tied_featurize(
+            batch_clones,
+            device,
+            chain_id_dict,
+            fixed_positions_dict,
+            omit_AA_dict,
+            tied_positions_dict,
+            pssm_dict,
+            bias_by_res_dict,
+        )
 
+        # 元コードでは model(...) の最後の引数 randn を torch.randn で渡している（重要）
+        randn_1 = torch.randn(chain_M.shape, device=X.device)
 
-      save_score=0                      # 0 for False, 1 for True; save score=-log_prob to npy files
-      save_probs=0                      # 0 for False, 1 for True; save MPNN predicted probabilites per position
-      score_only=0                      # 0 for False, 1 for True; score input backbone-sequence pairs
-      conditional_probs_only=0          # 0 for False, 1 for True; output conditional probabilities p(s_i given the rest of the sequence and backbone)
-      conditional_probs_only_backbone=0 # 0 for False, 1 for True; if true output conditional probabilities p(s_i given backbone)
+        log_probs = model(
+            X,
+            S,
+            mask,
+            chain_M * chain_M_pos,
+            residue_idx,
+            chain_encoding_all,
+            randn_1,
+        )
 
-      batch_size=1                      # Batch size; can set higher for titan, quadro GPUs, reduce this if running out of GPU memory
-      max_length=20000                  # Max sequence length
+        prof = np.exp(log_probs.to("cpu").detach().numpy().copy())[0, :, :20].T  # (20, L)
+        return prof
 
-      out_folder='.'                    # Path to a folder to output sequences, e.g. /home/out/
-      jsonl_path=''                     # Path to a folder with parsed pdb into jsonl
-      omit_AAs='X'                      # Specify which amino acids should be omitted in the generated sequence, e.g. 'AC' would omit alanine and cystine.
-
-      pssm_multi=0.0                    # A value between [0.0, 1.0], 0.0 means do not use pssm, 1.0 ignore MPNN predictions
-      pssm_threshold=0.0                # A value between -inf + inf to restric per position AAs
-      pssm_log_odds_flag=0               # 0 for False, 1 for True
-      pssm_bias_flag=0                   # 0 for False, 1 for True
-
-
-      ##############################################################
-
-      folder_for_outputs = out_folder
-
-      NUM_BATCHES = num_seq_per_target//batch_size
-      BATCH_COPIES = batch_size
-      temperatures = [float(item) for item in sampling_temp.split()]
-      omit_AAs_list = omit_AAs
-      alphabet = 'ACDEFGHIKLMNPQRSTVWYX'
-
-      omit_AAs_np = np.array([AA in omit_AAs_list for AA in alphabet]).astype(np.float32)
-
-      chain_id_dict = None
-      fixed_positions_dict = None
-      pssm_dict = None
-      omit_AA_dict = None
-      bias_AA_dict = None
-      tied_positions_dict = None
-      bias_by_res_dict = None
-      bias_AAs_np = np.zeros(len(alphabet))
-
-
-      ###############################################################
-      pdb_dict_list = parse_PDB(pdb_path, input_chain_list=chain_list)
-      dataset_valid = StructureDatasetPDB(pdb_dict_list, truncate=None, max_length=max_length)
-
-      chain_id_dict = {}
-      chain_id_dict[pdb_dict_list[0]['name']]= (designed_chain_list, fixed_chain_list)
-
-
-      if homomer:
-        tied_positions_dict = make_tied_positions_for_homomers(pdb_dict_list)
-      else:
-        tied_positions_dict = None
+    raise RuntimeError(f"Failed to parse/featurize PDB: {pdb_path}")
 
 
-      with torch.no_grad():
-        for ix, protein in enumerate(dataset_valid):
-          score_list = []
-          all_probs_list = []
-          all_log_probs_list = []
-          S_sample_list = []
-          batch_clones = [copy.deepcopy(protein) for i in range(BATCH_COPIES)]
-          X, S, mask, lengths, chain_M, chain_encoding_all, chain_list_list, visible_list_list, masked_list_list, masked_chain_length_list_list, chain_M_pos, omit_AA_mask, residue_idx, dihedral_mask, tied_pos_list_of_lists_list, pssm_coef, pssm_bias, pssm_log_odds_all, bias_by_res_all, tied_beta = tied_featurize(batch_clones, device, chain_id_dict, fixed_positions_dict, omit_AA_dict, tied_positions_dict, pssm_dict, bias_by_res_dict)
-          pssm_log_odds_mask = (pssm_log_odds_all > pssm_threshold).float() #1.0 for true, 0.0 for false
-          name_ = batch_clones[0]['name']
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Generate ProteinMPNN output profiles for all PDBs in a folder and save as *_profile.npy."
+    )
+    parser.add_argument("pdb_dir", type=str, help="Folder containing *.pdb files")
+    parser.add_argument("out_dir", type=str, help="Output folder to save *_profile.npy")
+    parser.add_argument("--model-name", type=str, default="v_48_020", help="ProteinMPNN vanilla weights name")
+    parser.add_argument("--backbone-noise", type=float, default=0.0, help="Backbone noise (augment_eps)")
+    parser.add_argument("--max-length", type=int, default=20000, help="Max sequence length")
+    parser.add_argument("--batch-size", type=int, default=1, help="Batch size for MPNN featurize")
+    parser.add_argument("--homomer", action="store_true", help="Tie positions across chains (homomer mode)")
+    parser.add_argument("--designed-chain", type=str, default="A", help="Designed chain letters, e.g. 'A' or 'A,B'")
+    parser.add_argument("--fixed-chain", type=str, default="", help="Fixed chain letters, e.g. 'B'")
+    parser.add_argument("--overwrite", action="store_true", help="Overwrite existing *_profile.npy files")
 
-          randn_1 = torch.randn(chain_M.shape, device=X.device)
-          log_probs = model(X, S, mask, chain_M*chain_M_pos, residue_idx, chain_encoding_all, randn_1) #こいつが構造を読んだ後のプロファイルに相当するのでは？
-          np.save(f'../processed_data/temp_ProteinMPNN_output_profile/{ID}_profile.npy', np.exp( log_probs.to('cpu').detach().numpy().copy() )[0, :, :20].T )
-    except Exception as e:
-      print(f"Error processing {ID}: {e}")
+    args = parser.parse_args()
+
+    pdb_dir = Path(args.pdb_dir).expanduser().resolve()
+    out_dir = Path(args.out_dir).expanduser().resolve()
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    if not pdb_dir.is_dir():
+        raise SystemExit(f"Not a directory: {pdb_dir}")
+
+    script_dir = Path(__file__).resolve().parent
+    _add_local_paths(script_dir)
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = _load_model(
+        script_dir=script_dir,
+        device=device,
+        model_name=args.model_name,
+        backbone_noise=args.backbone_noise,
+        hidden_dim=128,
+        num_layers=3,
+    )
+
+    pdb_paths = sorted(pdb_dir.glob("*.pdb"))
+    if len(pdb_paths) == 0:
+        raise SystemExit(f"No PDB files found in: {pdb_dir}")
+
+    for pdb_path in tqdm.tqdm(pdb_paths, total=len(pdb_paths)):
+        out_path = out_dir / f"{pdb_path.stem}_profile.npy"
+        if out_path.exists() and (not args.overwrite):
+            continue
+
+        try:
+            prof = compute_profile_for_pdb(
+                pdb_path=pdb_path,
+                model=model,
+                device=device,
+                homomer=args.homomer,
+                designed_chain=args.designed_chain,
+                fixed_chain=args.fixed_chain,
+                max_length=args.max_length,
+                batch_size=args.batch_size,
+            )
+            np.save(out_path, prof)
+        except Exception as e:
+            print(f"Error processing {pdb_path.name}: {e}", file=sys.stderr)
+
+    print(f"Done. Output dir: {out_dir}")
 
 
-
-
+if __name__ == "__main__":
+    # PyTorch の FutureWarning を抑えたい場合は適宜調整（挙動は変えない）
+    warnings.filterwarnings("default")
+    main()
