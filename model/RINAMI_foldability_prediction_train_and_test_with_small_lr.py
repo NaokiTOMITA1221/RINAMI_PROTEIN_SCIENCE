@@ -38,7 +38,7 @@ class RINAMI(nn.Module):
         self.mid_dim           = 128
         self.aa_rep_dim        = ESM_size
         
-        self.aa_seq_encoder     = layers.aa_seq2representation(model_size=self.aa_rep_dim) 
+        self.aa_seq_encoder     = layers.aa_seq2representation(model_size=self.aa_rep_dim)
         
         print(f"Dropout rate: {dropout}")
         self.dropout = nn.Dropout(p=dropout)
@@ -357,26 +357,20 @@ def test_model_with_Rocklin_benchmark_set(trained_model_param, ESM_size, num_epo
             header_to_label[header] = label
 
     #loading the training data and the validation data
-    struct_list_val_data   = []
-    foldability_label_val_data = []
-    mpnn_profile_val_data  = []
-    seq_list_val_data      = []
+    struct_list_test_data   = []
+    foldability_label_test_data = []
+    mpnn_profile_test_data  = []
+    seq_list_test_data      = []
         
     ##load csv data
     df = pd.read_csv('../processed_data/csv/Garcia_benchmark.csv')
     benchmark_data_dict = {}
-    for name, AF_pLDDT_3rec, AF_pLDDT_25rec, ESMFold_pLDDT, MPNN_score, AF_PAE in zip(df['Name'], df['AlphaFold_pLDDT3recycles'], df['AlphaFold_pLDDT25recycles'], df['ESMFold_pLDDT'], df['MPNN_score'], df['AlphaFold_PAE']):
-        benchmark_data_dict[name] = {'AF_pLDDT_3rec':AF_pLDDT_3rec, 'AF_pLDDT_25rec':AF_pLDDT_25rec, 'ESMFold_pLDDT':ESMFold_pLDDT, 'MPNN_score':MPNN_score, 'AF_PAE':AF_PAE}
-    #load Rocklin_dG_by_ESM_IF
-    Rocklin_dG_by_ESM_IF_dict = json.load(open('../processed_data/likelihood_data/Garcia_benchmark.json'))
+    for name, AF_pLDDT_3rec in zip(df['Name'], df['AlphaFold_pLDDT3recycles']):
+        benchmark_data_dict[name] = {'AF_pLDDT_3rec':AF_pLDDT_3rec}
 
     ##0th factor is the foldability-label (: 0 or 1).
     AF_pLDDT_3rec_and_label    = [[], []]
-    AF_pLDDT_25rec_and_label   = [[], []]
-    AF_PAE_and_label           = [[], []]
-    ESMFold_pLDDT_and_label    = [[], []]
-    MPNN_score_and_label       = [[], []]
-    regression_score_and_label = [[], []]
+
 
 
     for pdb in glob.glob('../processed_data/Garcia_benchmark_predicted_structure_pdb/*.pdb'):
@@ -397,40 +391,25 @@ def test_model_with_Rocklin_benchmark_set(trained_model_param, ESM_size, num_epo
             foldability_label = 0
         
         AF_pLDDT_3rec_and_label[0].append(foldability_label)
-        AF_pLDDT_25rec_and_label[0].append(foldability_label)
-        AF_PAE_and_label[0].append(foldability_label)
-        ESMFold_pLDDT_and_label[0].append(foldability_label)
-        MPNN_score_and_label[0].append(foldability_label)
-        regression_score_and_label[0].append(foldability_label)
-
         AF_pLDDT_3rec_and_label[1].append(benchmark_data_dict[design_name]['AF_pLDDT_3rec'])
-        AF_pLDDT_25rec_and_label[1].append(benchmark_data_dict[design_name]['AF_pLDDT_25rec'])
-        AF_PAE_and_label[1].append(-1*benchmark_data_dict[design_name]['AF_PAE']) ##-1 is multiplied because PAE is error.
-        ESMFold_pLDDT_and_label[1].append(benchmark_data_dict[design_name]['ESMFold_pLDDT'])
-        MPNN_score_and_label[1].append(benchmark_data_dict[design_name]['MPNN_score'])
 
-        
-        regression_score = Rocklin_dG_by_ESM_IF_dict[name]
-        regression_score_and_label[1].append(regression_score)
 
-        foldability_label_val_data.append(foldability_label)
-        struct_list_val_data.append(glob.glob(f'../processed_data/Garcia_benchmark_ProteinMPNN_node_rep/{name}*.pt')[0])
-        mpnn_profile_val_data.append(glob.glob(f'../processed_data/Garcia_benchmark_ProteinMPNN_output_profile/{name}*.npy')[0])
-        seq_list_val_data.append(seq)
+        foldability_label_test_data.append(foldability_label)
+        struct_list_test_data.append(glob.glob(f'../processed_data/Garcia_benchmark_ProteinMPNN_node_rep/{name}*.pt')[0])
+        mpnn_profile_test_data.append(glob.glob(f'../processed_data/Garcia_benchmark_ProteinMPNN_output_profile/{name}*.npy')[0])
+        seq_list_test_data.append(seq)
     
     model = RINAMI( ESM_size=ESM_size).to(device)
     model.load_state_dict(torch.load(trained_model_param))
-    criterion_1 = nn.BCEWithLogitsLoss()
 
     
     p_f_list, e_f_list, p_f_probs = [], [], []
     model.eval()
-    validation_loss = 0.0
-    steps_val = max(1, math.ceil(len(seq_list_val_data)/batch_size))
-    batch_list_val = batch_maker(seq_list_val_data, struct_list_val_data, mpnn_profile_val_data, foldability_label_val_data, batch_size)
+    steps_test = max(1, math.ceil(len(seq_list_test_data)/batch_size))
+    batch_list_test = batch_maker(seq_list_test_data, struct_list_test_data, mpnn_profile_test_data, foldability_label_test_data, batch_size)
 
     with torch.no_grad():
-        for batch in tqdm.tqdm(batch_list_val):
+        for batch in tqdm.tqdm(batch_list_test):
             
             aa_seq_batch  = batch[0]
             struct_batch  = batch[1]
@@ -439,21 +418,16 @@ def test_model_with_Rocklin_benchmark_set(trained_model_param, ESM_size, num_epo
 
             foldability = model(aa_seq_batch, struct_batch, profile_batch)
 
-            loss = criterion_1(foldability, foldability_batch)
-            validation_loss += loss.item()
 
             for p_f, e_f in zip(torch.sigmoid(foldability.to('cpu')), foldability_batch.to('cpu')):
                 p_f_probs.append(float(p_f))
                 p_f_list.append(0 if p_f<=0.5 else 1)
                 e_f_list.append(int(e_f))
-        
-
-    loss_avg_test = validation_loss / steps_val
 
     y_fold_true = np.array(e_f_list, dtype=int)
     probs_fold  = np.array(p_f_probs, dtype=float)
     n_pos = int((y_fold_true==1).sum()); n_neg = int((y_fold_true==0).sum())
-    minority_is_foldable_val = (n_pos < n_neg)
+    minority_is_foldable_test = (n_pos < n_neg)
 
     try:
         auc_roc = float(roc_auc_score(y_fold_true, probs_fold))
@@ -471,18 +445,13 @@ def test_model_with_Rocklin_benchmark_set(trained_model_param, ESM_size, num_epo
             true_neg_count += 1
             
     print(f'True Foldable: {true_pos_count}, True Not Foldable: {true_neg_count}')
-    print(f"Test Loss: {loss_avg_test:.6f} | "
-          f"ROC-AUC(foldable=1): {auc_roc:.4f} | "
+    print(f"ROC-AUC(foldable=1): {auc_roc:.4f} | "
           f"Accuracy: {acc:.4f} | ")
 
     auc_roc_AF_pLDDT_3rec    = float(roc_auc_score(np.array(AF_pLDDT_3rec_and_label[0], dtype=int), np.array(AF_pLDDT_3rec_and_label[1], dtype=float) ))
-    auc_roc_AF_pLDDT_25rec   = float(roc_auc_score(np.array(AF_pLDDT_25rec_and_label[0], dtype=int), np.array(AF_pLDDT_25rec_and_label[1], dtype=float) ))
-    auc_roc_AF_PAE           = float(roc_auc_score(np.array(AF_PAE_and_label[0], dtype=int), np.array(AF_PAE_and_label[1], dtype=float) ))
-    auc_roc_ESMFold_pLDDT    = float(roc_auc_score(np.array(ESMFold_pLDDT_and_label[0], dtype=int), np.array(ESMFold_pLDDT_and_label[1], dtype=float) ))
-    auc_roc_MPNN_score       = float(roc_auc_score(np.array(MPNN_score_and_label[0], dtype=int), np.array(MPNN_score_and_label[1], dtype=float) ))
-    auc_roc_regression_score = float(roc_auc_score(np.array(regression_score_and_label[0], dtype=int), np.array(regression_score_and_label[1], dtype=float) ))
     
-    return auc_roc, auc_roc_AF_pLDDT_3rec, auc_roc_AF_pLDDT_25rec, auc_roc_AF_PAE, auc_roc_ESMFold_pLDDT, auc_roc_MPNN_score, auc_roc_regression_score, true_pos_count, true_neg_count
+    
+    return auc_roc, auc_roc_AF_pLDDT_3rec, true_pos_count, true_neg_count
 
 
 
@@ -524,23 +493,15 @@ if __name__ == "__main__":
             seq_len_threshold_list =  [80, 130, 180, 230]
             ROC_AUC_list                  = []
             auc_roc_AF_pLDDT_3rec_list    = []
-            auc_roc_AF_pLDDT_25rec_list   = []
-            auc_roc_AF_PAE_list           = []
-            auc_roc_ESMFold_pLDDT_list    = []
-            auc_roc_MPNN_score_list       = []
-            auc_roc_regression_score_list = []
+
             true_pos_num_list             = []
             true_neg_num_list             = []
             for seq_len_threshold in seq_len_threshold_list:
                 print(f'***************************************************************************************************************************************************************************************************************************************\nseq_len_threshold = {seq_len_threshold}')
-                roc_auc, auc_roc_AF_pLDDT_3rec, auc_roc_AF_pLDDT_25rec, auc_roc_AF_PAE, auc_roc_ESMFold_pLDDT, auc_roc_MPNN_score, auc_roc_regression_score, tpc, tnc = test_model_with_Rocklin_benchmark_set(trained_model_path, ESM_size=ESM_dim, seq_len_threshold=seq_len_threshold)
+                roc_auc, auc_roc_AF_pLDDT_3rec, tpc, tnc = test_model_with_Rocklin_benchmark_set(trained_model_path, ESM_size=ESM_dim, seq_len_threshold=seq_len_threshold)
                 ROC_AUC_list.append(roc_auc)
                 auc_roc_AF_pLDDT_3rec_list.append(auc_roc_AF_pLDDT_3rec)
-                auc_roc_AF_pLDDT_25rec_list.append(auc_roc_AF_pLDDT_25rec)
-                auc_roc_AF_PAE_list.append(auc_roc_AF_PAE)
-                auc_roc_ESMFold_pLDDT_list.append(auc_roc_ESMFold_pLDDT)
-                auc_roc_MPNN_score_list.append(auc_roc_MPNN_score)
-                auc_roc_regression_score_list.append(auc_roc_regression_score)
+
                 true_pos_num_list.append(tpc)
                 true_neg_num_list.append(tnc)
             
@@ -549,7 +510,7 @@ if __name__ == "__main__":
             plt.plot(seq_len_threshold_list, ROC_AUC_list, c='#f6adc6', linestyle='-', marker='o')
             plt.plot(seq_len_threshold_list, auc_roc_AF_pLDDT_3rec_list, c="gray", linestyle='--', marker='o', alpha=0.5)
 
-            plt.legend(['Our model', 'AlphaFold (3 recycle) pLDDT'])
+            plt.legend(['RINAMI', 'AlphaFold (3 recycle) pLDDT'])
 
             plt.xlabel('Sequence length threshold\n (Foldable :  Not Foldable)', fontsize=12, fontweight='bold')
             plt.ylabel('ROC-AUC', fontsize=12, fontweight='bold')
