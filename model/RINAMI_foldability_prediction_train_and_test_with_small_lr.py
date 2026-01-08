@@ -5,7 +5,7 @@ import pandas as pd
 import tqdm
 import layers
 from sklearn.metrics import roc_auc_score, average_precision_score, precision_recall_curve
-from util import batch_maker_for_inputs, aa_sequences_to_padded_onehot, pad_feature_matrices, make_balanced_minibatch_indices, gather_batch_by_indices, undersample_pos_to_match_neg
+from util import batch_maker_for_inputs, aa_sequences_to_padded_onehot, pad_feature_matrices, make_balanced_minibatch_indices, gather_batch_by_indices, undersample_pos_to_match_neg, get_sequence_from_single_chain_pdb
 import gc
 from transformers import get_cosine_schedule_with_warmup
 import numpy as np
@@ -40,7 +40,6 @@ class RINAMI(nn.Module):
         
         self.aa_seq_encoder     = layers.aa_seq2representation(model_size=self.aa_rep_dim)
         
-        print(f"Dropout rate: {dropout}")
         self.dropout = nn.Dropout(p=dropout)
 
         # Positional encoding
@@ -406,7 +405,7 @@ def test_model_with_Rocklin_benchmark_set(trained_model_param, ESM_size, num_epo
     p_f_list, e_f_list, p_f_probs = [], [], []
     model.eval()
     steps_test = max(1, math.ceil(len(seq_list_test_data)/batch_size))
-    batch_list_test = batch_maker(seq_list_test_data, struct_list_test_data, mpnn_profile_test_data, foldability_label_test_data, batch_size)
+    batch_list_test = batch_maker_for_inputs(seq_list_test_data, struct_list_test_data, mpnn_profile_test_data, foldability_label_test_data, batch_size)
 
     with torch.no_grad():
         for batch in tqdm.tqdm(batch_list_test):
@@ -467,7 +466,7 @@ def test_model_with_Rocklin_benchmark_set(trained_model_param, ESM_size, num_epo
 
 if __name__ == "__main__":
    """
-    Testing  : python3 RINAMI_foldability_prediction_train_and_test.py test_mode <model param path> <test set: "Mega_test", "Maxwell_test", "Garcia_benchmark">
+    Testing  : python3 RINAMI_foldability_prediction_train_and_test.py test_mode <model param path> 
    """
    args = sys.argv
 
@@ -477,45 +476,44 @@ if __name__ == "__main__":
        print('basic training step')
        train_model(args[1], num_epochs=1, dropout=0., ESM_size=ESM_dim)
 
-   elif len(args) == 3:
+   elif len(args) == 3 and args[-2]!='test_mode':
        ESM_dim = 320
        print('Training mode...')
        print(f'training step')
        train_model(args[1], trained_model_param=args[2], num_epochs=1, dropout=0., ESM_size=ESM_dim)
    
-   elif len(args) == 4:
+   elif len(args) == 3 and args[-2]=='test_mode':
         ESM_dim = 320
-        trained_model_path = args[-2]
-        test_mode          = args[-1]
+        trained_model_path = args[-1]
 
-        if test_mode == 'Garcia_benchmark':
-            print('Test mode: Garcia_benchmark_test')
-            seq_len_threshold_list =  [80, 130, 180, 230]
-            ROC_AUC_list                  = []
-            auc_roc_AF_pLDDT_3rec_list    = []
+    
+        print('Test mode: Garcia_benchmark_test')
+        seq_len_threshold_list =  [80, 130, 180, 230]
+        ROC_AUC_list                  = []
+        auc_roc_AF_pLDDT_3rec_list    = []
 
-            true_pos_num_list             = []
-            true_neg_num_list             = []
-            for seq_len_threshold in seq_len_threshold_list:
-                print(f'***************************************************************************************************************************************************************************************************************************************\nseq_len_threshold = {seq_len_threshold}')
-                roc_auc, auc_roc_AF_pLDDT_3rec, tpc, tnc = test_model_with_Rocklin_benchmark_set(trained_model_path, ESM_size=ESM_dim, seq_len_threshold=seq_len_threshold)
-                ROC_AUC_list.append(roc_auc)
-                auc_roc_AF_pLDDT_3rec_list.append(auc_roc_AF_pLDDT_3rec)
+        true_pos_num_list             = []
+        true_neg_num_list             = []
+        for seq_len_threshold in seq_len_threshold_list:
+            print(f'***************************************************************************************************************************************************************************************************************************************\nseq_len_threshold = {seq_len_threshold}')
+            roc_auc, auc_roc_AF_pLDDT_3rec, tpc, tnc = test_model_with_Rocklin_benchmark_set(trained_model_path, ESM_size=ESM_dim, seq_len_threshold=seq_len_threshold)
+            ROC_AUC_list.append(roc_auc)
+            auc_roc_AF_pLDDT_3rec_list.append(auc_roc_AF_pLDDT_3rec)
 
-                true_pos_num_list.append(tpc)
-                true_neg_num_list.append(tnc)
-            
-            plt.figure(figsize=(8, 5))
-            plt.ylim(0.3,0.9)
-            plt.plot(seq_len_threshold_list, ROC_AUC_list, c='#f6adc6', linestyle='-', marker='o')
-            plt.plot(seq_len_threshold_list, auc_roc_AF_pLDDT_3rec_list, c="gray", linestyle='--', marker='o', alpha=0.5)
+            true_pos_num_list.append(tpc)
+            true_neg_num_list.append(tnc)
+        
+        plt.figure(figsize=(8, 5))
+        plt.ylim(0.3,0.9)
+        plt.plot(seq_len_threshold_list, ROC_AUC_list, c='#f6adc6', linestyle='-', marker='o')
+        plt.plot(seq_len_threshold_list, auc_roc_AF_pLDDT_3rec_list, c="gray", linestyle='--', marker='o', alpha=0.5)
 
-            plt.legend(['RINAMI', 'AlphaFold (3 recycle) pLDDT'])
+        plt.legend(['RINAMI', 'AlphaFold (3 recycle) pLDDT'])
 
-            plt.xlabel('Sequence length threshold\n (Foldable :  Not Foldable)', fontsize=12, fontweight='bold')
-            plt.ylabel('ROC-AUC', fontsize=12, fontweight='bold')
-            plt.xticks(seq_len_threshold_list, [f'{seq_len_threshold}\n ({tpc} : {tnc})' for seq_len_threshold, tpc, tnc in zip(seq_len_threshold_list, true_pos_num_list, true_neg_num_list)])
+        plt.xlabel('Sequence length threshold\n (Foldable :  Not Foldable)', fontsize=12, fontweight='bold')
+        plt.ylabel('ROC-AUC', fontsize=12, fontweight='bold')
+        plt.xticks(seq_len_threshold_list, [f'{seq_len_threshold}\n ({tpc} : {tnc})' for seq_len_threshold, tpc, tnc in zip(seq_len_threshold_list, true_pos_num_list, true_neg_num_list)])
 
-            sns.despine()
-            plt.savefig('Trained_model_Garcia_benchmark_result.png', bbox_inches='tight', dpi=300)
-            plt.savefig('Trained_model_Garcia_benchmark_result.pdf', bbox_inches='tight', dpi=300)
+        sns.despine()
+        plt.savefig('Trained_model_Garcia_benchmark_result.png', bbox_inches='tight', dpi=300)
+        plt.savefig('Trained_model_Garcia_benchmark_result.pdf', bbox_inches='tight', dpi=300)

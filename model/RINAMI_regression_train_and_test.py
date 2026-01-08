@@ -37,7 +37,6 @@ class RINAMI(nn.Module):
         self.aa_seq_encoder     = layers.aa_seq2representation(model_size=self.aa_rep_dim) 
         
         #Dropout
-        print(f"Dropout rate: {dropout}")
         self.dropout = nn.Dropout(p=dropout)
 
         #positional encoding
