@@ -5,8 +5,6 @@ import numpy as np
 import esm
 import glob
 import os
-from torch.nn.utils.rnn import pad_sequence
-from torch_geometric.nn import GCNConv, NNConv
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
