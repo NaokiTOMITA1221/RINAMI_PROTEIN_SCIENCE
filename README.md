@@ -47,7 +47,7 @@ When you try the training and test of RINAMI by yourself, structures of proteins
     processed_data/Maxwell_predicted_structure_pdb 
     processed_data/Garcia_benchmark_predicted_structure_pdb
 
-respectively.
+respectively. Structural prediction typically takes about one day with ESMFold.
 
 After the structural prediction, please generate ProteinMPNN node representation and ProteinMPNN output profile from the predicted structure and save them into properly made directories, following the process below.
     
