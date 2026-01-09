@@ -41,10 +41,10 @@ After cloning this repository and making a directory named "processed_data" in t
 Zenodo strage: 
 
 When you try the training and test of RINAMI by yourself, structures of proteins in Mega-scale dataset, Maxwell dataset, and Garcia benchmark set should be predicted and saved into:
-    "processed_data/Mega_predicted_structure_pdb", 
-    "processed_data/Maxwell_predicted_structure_pdb", 
-    "processed_data/Garcia_benchmark_predicted_structure_pdb"
-, respectively.
+    processed_data/Mega_predicted_structure_pdb 
+    processed_data/Maxwell_predicted_structure_pdb 
+    processed_data/Garcia_benchmark_predicted_structure_pdb
+respectively.
 
 After the structural prediction, please generate ProteinMPNN node representation and ProteinMPNN output profile from the predicted structure and save them into properly made directories, following the process below.
     
