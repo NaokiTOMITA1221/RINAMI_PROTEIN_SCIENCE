@@ -38,6 +38,7 @@ Creation of the environment:
  
 Because of the data-size limitation, the data used for model training and testing is not put in this repository.
 After cloning this repository and making a directory named "processed_data" in the cloned repository, please download "csv.zip" and "decoy_to_seq_dict.json", deposited on Zenodo, into "processed_data" and unzip "csv.zip".
+
 Zenodo strage: 
 
 When you try the training and test of RINAMI by yourself, structures of proteins in Mega-scale dataset, Maxwell dataset, and Garcia benchmark set should be predicted and saved into:
