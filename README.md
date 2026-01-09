@@ -40,7 +40,8 @@ Because of the data-size limitation, the data used for model training and testin
 After cloning this repository and making a directory named "processed_data" in the cloned repository, please download "csv.zip" and "decoy_to_seq_dict.json", deposited on Zenodo, into "processed_data" and unzip "csv.zip".
 Zenodo strage: 
 
-When you try the training and test of RINAMI by yourself, structures of proteins in Mega-scale dataset, Maxwell dataset, and Garcia benchmark set should be predicted and saved into "RINAMI_for_github/processed_data/Mega_predicted_structure_pdb", "RINAMI_for_github/processed_data/Maxwell_predicted_structure_pdb", and "RINAMI_for_github/processed_data/Garcia_benchmark_predicted_structure_pdb", respectively.
+When you try the training and test of RINAMI by yourself, structures of proteins in Mega-scale dataset, Maxwell dataset, and Garcia benchmark set should be predicted and saved into "processed_data/Mega_predicted_structure_pdb", "processed_data/Maxwell_predicted_structure_pdb", and "processed_data/Garcia_benchmark_predicted_structure_pdb", respectively.
+
 After the structural prediction, please generate ProteinMPNN node representation and ProteinMPNN output profile from the predicted structure and save them into properly made directories, following the process below.
     
     cd scripts
