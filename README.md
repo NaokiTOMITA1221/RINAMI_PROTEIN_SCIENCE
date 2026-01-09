@@ -65,4 +65,7 @@ After the structural prediction, please generate ProteinMPNN node representation
 
 # Test of RINAMI
 
+    cd model
+    python RINAMI_regression_train_and_test.py test_mode [model param path] [test set: "Mega_test", "Maxwell_test", "res_AA_wise_dG_mat"] #Regression task
+    python RINAMI_foldability_prediction_train_and_test.py test_mode [model param path] #Foldability prediciton task
     
