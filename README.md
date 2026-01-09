@@ -34,7 +34,7 @@ Creation of the environment:
     python run_inference.py [your_pdb_path]
     
     
- # Training and Test of RINAMI
+ # Preparation for training and testing RINAMI
  
 Because of the data-size limitation, the data used for model training and testing is not put in this repository.
 After cloning this repository and making a directory named "processed_data" in the cloned repository, please download "csv.zip" and "decoy_to_seq_dict.json", deposited on Zenodo, into "processed_data" and unzip "csv.zip".
@@ -57,4 +57,12 @@ After the structural prediction, please generate ProteinMPNN node representation
     python pdb_to_mpnn_output_profile.py ../processed_data/Maxwell_predicted_structure_pdb ../processed_data/Maxwell_ProteinMPNN_output_profile
     python pdb_to_mpnn_node_rep.py ../processed_data/Garcia_benchmark_predicted_structure_pdb ../processed_data/Grcia_benchmark_ProteinMPNN_node_rep
     python pdb_to_mpnn_output_profile.py ../processed_data/Garcia_benchmark_predicted_structure_pdb ../processed_data/Grcia_benchmark_ProteinMPNN_output_profile
+    
+# Training of RINAMI
+
+    cd model
+    bash train_RINAMI.sh 
+
+# Test of RINAMI
+
     
