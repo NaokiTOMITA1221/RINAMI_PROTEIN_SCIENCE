@@ -50,10 +50,10 @@ class PDBGraphBuilder:
 
 if __name__ == "__main__":
     args = sys.argv
-    pdb_folda = args[-2]
+    pdb_folder = args[-2]
     out_path  = args[-1]
     sb.call(f'mkdir -p {out_path}', shell=True)
-    pdbs = glob.glob( os.path.join(pdb_folda, "*.pdb") )
+    pdbs = glob.glob( os.path.join(pdb_folder, "*.pdb") )
     builder = PDBGraphBuilder(device="cpu")
     for pdb in tqdm.tqdm(pdbs):
         builder.build_graph_from_pdb(pdb, out_path)

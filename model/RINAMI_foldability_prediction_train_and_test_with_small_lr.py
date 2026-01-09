@@ -162,8 +162,8 @@ def train_model(model_save_path, trained_model_param=None, num_epochs=5, batch_s
     for (name, wt_name) in tqdm.tqdm(zip(df_train_data['name'], df_train_data['WT_name'])):
         name_  = name.replace('.pdb', '')
         aa_seq = decoy_to_seq_dict['decoy_'+name]
-        struct_list_train_data.append(f'../processed_data/Mega_decoy_ProteinMPNN_node_rep/decoy_{name}.pt')
-        mpnn_profile_train_data.append(f'../processed_data/Mega_decoy_ProteinMPNN_output_profile/decoy_{name}_profile.npy')
+        struct_list_train_data.append(f'../processed_data/Mega_ProteinMPNN_node_rep/decoy_{name}.pt')
+        mpnn_profile_train_data.append(f'../processed_data/Mega_ProteinMPNN_output_profile/decoy_{name}_profile.npy')
         seq_list_train_data.append(aa_seq)
         dG_list_train_data.append(-1)  # デコイは負扱い（<=0）
 
@@ -181,8 +181,8 @@ def train_model(model_save_path, trained_model_param=None, num_epochs=5, batch_s
     for name, wt_name in zip(df_val_data['name'], df_val_data['WT_name']):
         name_  = name.replace('.pdb', '')
         aa_seq = decoy_to_seq_dict['decoy_'+name]
-        struct_list_val_data.append(f'../processed_data/Mega_decoy_ProteinMPNN_node_rep/decoy_{name}.pt')
-        mpnn_profile_val_data.append(f'../processed_data/Mega_decoy_ProteinMPNN_output_profile/decoy_{name}_profile.npy')
+        struct_list_val_data.append(f'../processed_data/Mega_ProteinMPNN_node_rep/decoy_{name}.pt')
+        mpnn_profile_val_data.append(f'../processed_data/Mega_ProteinMPNN_output_profile/decoy_{name}_profile.npy')
         seq_list_val_data.append(aa_seq)
         dG_list_val_data.append(-1)
 

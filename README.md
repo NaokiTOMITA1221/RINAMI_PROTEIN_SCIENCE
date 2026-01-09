@@ -7,7 +7,7 @@
     - GPU: NVIDIA GeForce RTX 3080 (10GB)
 
 
-Because of the data-size limitation, we put the all data used for model training and testing on the Zenodo strage: (Strage URL)
+
 
 
 # Building an execution environment
@@ -17,10 +17,6 @@ Cloning this repository:
     git clone https://github.com/NaokiTOMITA1221/RINAMI_PROTEIN_SCIENCE.git
     cd RINAMI_PROTEIN_SCIENCE
     mkdir processed_data
-
-After cloning this repository and making a directory named "processed_data" in the cloned repository, please download all data, deposited on Zenodo, into "processed_data" and unzip if you need.
-
-
 
 
 Creation of the environment:
@@ -37,4 +33,21 @@ Creation of the environment:
     cd scripts
     python run_inference.py [your_pdb_path]
     
+    
+ # Training and Test of RINAMI
+ 
+Because of the data-size limitation, the data used for model training and testing is not put in this repository.
+After cloning this repository and making a directory named "processed_data" in the cloned repository, please download "csv.zip" and "decoy_to_seq_dict.json", deposited on Zenodo, into "processed_data" and unzip "csv.zip".
+Zenodo strage: 
 
+When you try the training and test of RINAMI by yourself, structures of proteins in Mega-scale dataset, Maxwell dataset, and Garcia benchmark set should be predicted and saved into "RINAMI_for_github/processed_data/Mega_predicted_structure_pdb", "RINAMI_for_github/processed_data/Maxwell_predicted_structure_pdb", and "RINAMI_for_github/processed_data/Garcia_benchmark_predicted_structure_pdb", respectively.
+After the structural prediction, please generate ProteinMPNN node representation and ProteinMPNN output profile from the predicted structure and save them into properly made directories, following the process below.
+    
+    cd scripts
+    python pdb_to_mpnn_node_rep.py [path of the folder with Mega-scale predicted structures] Mega_ProteinMPNN_node_rep
+    python pdb_to_mpnn_output_profile.py [path of the folder with Mega-scale predicted structures] Mega_ProteinMPNN_output_profile
+    python pdb_to_mpnn_node_rep.py [path of the folder with Maxwell predicted structures] Maxwell_ProteinMPNN_node_rep
+    python pdb_to_mpnn_output_profile.py [path of the folder with Maxwell predicted structures] Maxwell_ProteinMPNN_output_profile
+    python pdb_to_mpnn_node_rep.py [path of the folder with Grcia_benchmark predicted structures] Grcia_benchmark_ProteinMPNN_node_rep
+    python pdb_to_mpnn_output_profile.py [path of the folder with Grcia_benchmark predicted structures] Grcia_benchmark_ProteinMPNN_output_profile
+    
