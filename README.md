@@ -44,10 +44,10 @@ When you try the training and test of RINAMI by yourself, structures of proteins
 After the structural prediction, please generate ProteinMPNN node representation and ProteinMPNN output profile from the predicted structure and save them into properly made directories, following the process below.
     
     cd scripts
-    python pdb_to_mpnn_node_rep.py [path of the folder with Mega-scale predicted structures] Mega_ProteinMPNN_node_rep
-    python pdb_to_mpnn_output_profile.py [path of the folder with Mega-scale predicted structures] Mega_ProteinMPNN_output_profile
-    python pdb_to_mpnn_node_rep.py [path of the folder with Maxwell predicted structures] Maxwell_ProteinMPNN_node_rep
-    python pdb_to_mpnn_output_profile.py [path of the folder with Maxwell predicted structures] Maxwell_ProteinMPNN_output_profile
-    python pdb_to_mpnn_node_rep.py [path of the folder with Grcia_benchmark predicted structures] Grcia_benchmark_ProteinMPNN_node_rep
-    python pdb_to_mpnn_output_profile.py [path of the folder with Grcia_benchmark predicted structures] Grcia_benchmark_ProteinMPNN_output_profile
+    python pdb_to_mpnn_node_rep.py [path of the folder with Mega-scale predicted structures] ../processed_data/Mega_ProteinMPNN_node_rep
+    python pdb_to_mpnn_output_profile.py [path of the folder with Mega-scale predicted structures] ../processed_data/Mega_ProteinMPNN_output_profile
+    python pdb_to_mpnn_node_rep.py [path of the folder with Maxwell predicted structures] ../processed_data/Maxwell_ProteinMPNN_node_rep
+    python pdb_to_mpnn_output_profile.py [path of the folder with Maxwell predicted structures] ../processed_data/Maxwell_ProteinMPNN_output_profile
+    python pdb_to_mpnn_node_rep.py [path of the folder with Grcia_benchmark predicted structures] ../processed_data/Grcia_benchmark_ProteinMPNN_node_rep
+    python pdb_to_mpnn_output_profile.py [path of the folder with Grcia_benchmark predicted structures] ../processed_data/Grcia_benchmark_ProteinMPNN_output_profile
     
