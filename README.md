@@ -36,7 +36,7 @@ Creation of the environment:
     
  # Preparation for training and testing RINAMI
  
-Because of the data-size limitation, the data used for model training and testing is not put in this repository.
+Because of the data-size limitation, the data used for model training and testing are not put in this repository.
 After cloning this repository and making a directory named "processed_data" in the cloned repository, please download "csv.zip" and "decoy_to_seq_dict.json", deposited on Zenodo, into "processed_data" and unzip "csv.zip".
 
 Zenodo strage: https://doi.org/10.5281/zenodo.18186263
