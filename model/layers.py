@@ -150,10 +150,10 @@ class MultiHeadCrossAttention(nn.Module):
     def forward(self, sequence, structure, seq_mask, struct_mask, attn_map_out=False):
         b, n, _, h = *sequence.shape, self.heads
         
-        # Project drug into query space
+        # Project sequence into query space
         q = self.to_q(sequence).view(b, n, self.heads, -1).transpose(1, 2)
         
-        # Project target into key and value space
+        # Project structure into key and value space
         struct_len = struct.shape[1]
         k = self.to_k(struct).view(b, struct_len, self.heads, -1).transpose(1, 2)
         v = self.to_v(struct).view(b, struct_len, self.heads, -1).transpose(1, 2)
