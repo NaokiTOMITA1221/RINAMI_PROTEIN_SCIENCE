@@ -154,9 +154,9 @@ class MultiHeadCrossAttention(nn.Module):
         q = self.to_q(sequence).view(b, n, self.heads, -1).transpose(1, 2)
         
         # Project structure into key and value space
-        struct_len = struct.shape[1]
-        k = self.to_k(struct).view(b, struct_len, self.heads, -1).transpose(1, 2)
-        v = self.to_v(struct).view(b, struct_len, self.heads, -1).transpose(1, 2)
+        struct_len = structure.shape[1]
+        k = self.to_k(structure).view(b, struct_len, self.heads, -1).transpose(1, 2)
+        v = self.to_v(structure).view(b, struct_len, self.heads, -1).transpose(1, 2)
         
         # Compute attention weights
         dots = torch.matmul(q, k.transpose(-2, -1)) * self.scale
