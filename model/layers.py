@@ -126,44 +126,46 @@ class aa_seq2representation(nn.Module):
 ####################################################################
 class MultiHeadCrossAttention(nn.Module):
     """
-    drug: (batch_size, drug_len, drug_dim)
-    target: (batch_size, target_len, target_dim)
-    calculate attention score between drug and target
+    Args:
+    - sequence representation : (batch_size, seq_len, seq_dim)
+    - structure representation: (batch_size, struct_len, struct_dim)
+    Returns:
+    - reweighted structure representation: (batch_size, struct_len, struct_dim)
     """
 
-    def __init__(self, drug_dim=768, target_dim=2560, heads=12, dim_head=128):
+    def __init__(self, seq_dim=128, struct_dim=120, heads=20, dim_head=128):
         super().__init__()
-        self.drug_dim = drug_dim
-        self.target_dim = target_dim
+        self.seq_dim = seq_dim
+        self.struct_dim = struct_dim
         self.heads = heads
         self.scale = dim_head ** -0.5
 
-        self.to_q = nn.Linear(drug_dim, heads * dim_head, bias=False)
-        self.to_k = nn.Linear(target_dim, heads * dim_head, bias=False)
-        self.to_v = nn.Linear(target_dim, heads * dim_head, bias=False)
-        self.to_out = nn.Linear(heads * dim_head, target_dim)
+        self.to_q = nn.Linear(seq_dim, heads * dim_head, bias=False)
+        self.to_k = nn.Linear(struct_dim, heads * dim_head, bias=False)
+        self.to_v = nn.Linear(struct_dim, heads * dim_head, bias=False)
+        self.to_out = nn.Linear(heads * dim_head, struct_dim)
         
-        self.layer_norm = nn.LayerNorm(target_dim)
+        self.layer_norm = nn.LayerNorm(struct_dim)
 
-    def forward(self, drug, target, drug_mask, pro_mask, attn_map_out=False):
-        b, n, _, h = *drug.shape, self.heads
+    def forward(self, sequence, structure, seq_mask, struct_mask, attn_map_out=False):
+        b, n, _, h = *sequence.shape, self.heads
         
         # Project drug into query space
-        q = self.to_q(drug).view(b, n, self.heads, -1).transpose(1, 2)
+        q = self.to_q(sequence).view(b, n, self.heads, -1).transpose(1, 2)
         
         # Project target into key and value space
-        target_len = target.shape[1]
-        k = self.to_k(target).view(b, target_len, self.heads, -1).transpose(1, 2)
-        v = self.to_v(target).view(b, target_len, self.heads, -1).transpose(1, 2)
+        struct_len = struct.shape[1]
+        k = self.to_k(struct).view(b, struct_len, self.heads, -1).transpose(1, 2)
+        v = self.to_v(struct).view(b, struct_len, self.heads, -1).transpose(1, 2)
         
-        # Compute attention scores
+        # Compute attention weights
         dots = torch.matmul(q, k.transpose(-2, -1)) * self.scale
         
         # Apply masks
-        drug_mask = drug_mask.unsqueeze(1).unsqueeze(-1).expand(-1, self.heads, n, target_len)
-        masked_dots = dots.masked_fill(drug_mask == 0, -1e6)
-        pro_mask = pro_mask.unsqueeze(1).unsqueeze(-2).expand(-1, self.heads, n, target_len)
-        masked_dots = masked_dots.masked_fill(pro_mask == 0, -1e6)
+        seq_mask = seq_mask.unsqueeze(1).unsqueeze(-1).expand(-1, self.heads, n, struct_len)
+        masked_dots = dots.masked_fill(seq_mask == 0, -1e6)
+        struct_mask = struct_mask.unsqueeze(1).unsqueeze(-2).expand(-1, self.heads, n, struct_len)
+        masked_dots = masked_dots.masked_fill(struct_mask == 0, -1e6)
         
         # Apply softmax to compute attention weights
         attn = F.softmax(masked_dots, dim=-1)
@@ -172,9 +174,8 @@ class MultiHeadCrossAttention(nn.Module):
         out = torch.matmul(attn, v)
         out = out.transpose(1, 2).contiguous().view(b, n, -1)
 
-        out = self.to_out(out) + target
-        
-        ##out = self.layer_norm(out) 
+        #skip connection
+        out = self.to_out(out) + structure
             
         if attn_map_out:
             return out, attn
