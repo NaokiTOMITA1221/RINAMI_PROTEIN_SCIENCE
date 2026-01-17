@@ -84,12 +84,12 @@ class aa_seq2representation(nn.Module):
             param.requires_grad = True  ##original: True
     def forward(self, seq_list):
         '''
-        input : アミノ酸配列のlist
+        input : list of aa-sequences
         output:
-            vector_outputs: [batch_size, max_seq_len, embed_dim] のテンソル
-            attention_masks: [batch_size, max_seq_len] のアテンションマスク (0: PAD, 1: 実トークン)
+            vector_outputs: tensor -> shape: [batch_size, max_seq_len, embed_dim] 
+            attention_masks: attention_mask_tensor -> shape: [batch_size, max_seq_len] (0: PAD, 1: valid token)
         '''
-        last_layer_ind = self.n_layers  # モデルによって変更する
+        last_layer_ind = self.n_layers  # output layer of the ESM
         
         len_list = [len(seq) for seq in seq_list]
         max_len = max(len_list)
@@ -138,25 +138,25 @@ class MultiHeadCrossAttention(nn.Module):
         self.seq_dim = seq_dim
         self.struct_dim = struct_dim
         self.heads = heads
-        self.scale = dim_head ** -0.5
+        self.scale = dim_head ** -(1/2)
 
-        self.to_q = nn.Linear(seq_dim, heads * dim_head, bias=False)
-        self.to_k = nn.Linear(struct_dim, heads * dim_head, bias=False)
-        self.to_v = nn.Linear(struct_dim, heads * dim_head, bias=False)
-        self.to_out = nn.Linear(heads * dim_head, struct_dim)
+        self.projection_q = nn.Linear(seq_dim, heads * dim_head, bias=False)
+        self.projection_k = nn.Linear(struct_dim, heads * dim_head, bias=False)
+        self.projection_v = nn.Linear(struct_dim, heads * dim_head, bias=False)
+        self.linear_out   = nn.Linear(heads * dim_head, struct_dim)
         
-        self.layer_norm = nn.LayerNorm(struct_dim)
+        self.layer_norm = nn.LayerNorm(struct_dim) #unused
 
     def forward(self, sequence, structure, seq_mask, struct_mask, attn_map_out=False):
         b, n, _, h = *sequence.shape, self.heads
         
         # Project sequence into query space
-        q = self.to_q(sequence).view(b, n, self.heads, -1).transpose(1, 2)
+        q = self.projection_q(sequence).view(b, n, self.heads, -1).transpose(1, 2)
         
         # Project structure into key and value space
         struct_len = structure.shape[1]
-        k = self.to_k(structure).view(b, struct_len, self.heads, -1).transpose(1, 2)
-        v = self.to_v(structure).view(b, struct_len, self.heads, -1).transpose(1, 2)
+        k = self.projection_k(structure).view(b, struct_len, self.heads, -1).transpose(1, 2)
+        v = self.projection_v(structure).view(b, struct_len, self.heads, -1).transpose(1, 2)
         
         # Compute attention weights
         dots = torch.matmul(q, k.transpose(-2, -1)) * self.scale
