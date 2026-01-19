@@ -17,6 +17,95 @@ from sklearn.metrics import accuracy_score
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+
+
+
+def _bootstrap_auc_ci(y_true, y_score, B=10000, seed=0, alpha=0.05):
+    """
+    y_true: (N,) 0/1
+    y_score:(N,) continuous score
+    returns: (auc_hat, (ci_low, ci_high), auc_samples, p_auc_le_0p5)
+    """
+    rng = np.random.default_rng(seed)
+    y_true = np.asarray(y_true, dtype=int)
+    y_score = np.asarray(y_score, dtype=float)
+    N = y_true.shape[0]
+
+    # point estimate
+    auc_hat = float(roc_auc_score(y_true, y_score))
+
+    auc_samples = []
+    for _ in range(B):
+        idx = rng.integers(0, N, size=N)  # resample with replacement
+        y_b = y_true[idx]
+        s_b = y_score[idx]
+        # bootstrap sample may have only one class -> AUC undefined
+        if len(np.unique(y_b)) < 2:
+            continue
+        auc_samples.append(float(roc_auc_score(y_b, s_b)))
+
+    auc_samples = np.array(auc_samples, dtype=float)
+    if auc_samples.size == 0:
+        return auc_hat, (float('nan'), float('nan')), auc_samples, float('nan')
+
+    ci_low = float(np.quantile(auc_samples, alpha/2))
+    ci_high = float(np.quantile(auc_samples, 1 - alpha/2))
+
+    # "individual bootstrap test": how often AUC <= 0.5 under bootstrap distribution
+    # (interpretation: if this is small, model is very likely > random)
+    p_auc_le_0p5 = float((auc_samples <= 0.5).mean())
+
+    return auc_hat, (ci_low, ci_high), auc_samples, p_auc_le_0p5
+
+
+def _paired_bootstrap_auc_diff_ci(y_true, score_a, score_b, B=10000, seed=0, alpha=0.05):
+    """
+    paired bootstrap for AUC difference: AUC(score_a) - AUC(score_b)
+    returns: (diff_hat, (ci_low, ci_high), diff_samples, p_diff_le_0)
+    """
+    rng = np.random.default_rng(seed)
+    y_true = np.asarray(y_true, dtype=int)
+    score_a = np.asarray(score_a, dtype=float)
+    score_b = np.asarray(score_b, dtype=float)
+    N = y_true.shape[0]
+
+    diff_hat = float(roc_auc_score(y_true, score_a) - roc_auc_score(y_true, score_b))
+
+    diff_samples = []
+    for _ in range(B):
+        idx = rng.integers(0, N, size=N)
+        y_b = y_true[idx]
+        a_b = score_a[idx]
+        b_b = score_b[idx]
+        if len(np.unique(y_b)) < 2:
+            continue
+        da = roc_auc_score(y_b, a_b)
+        db = roc_auc_score(y_b, b_b)
+        diff_samples.append(float(da - db))
+
+    diff_samples = np.array(diff_samples, dtype=float)
+    if diff_samples.size == 0:
+        return diff_hat, (float('nan'), float('nan')), diff_samples, float('nan')
+
+    ci_low = float(np.quantile(diff_samples, alpha/2))
+    ci_high = float(np.quantile(diff_samples, 1 - alpha/2))
+
+    # probability that diff <= 0 in bootstrap distribution
+    p_diff_le_0 = float((diff_samples <= 0.0).mean())
+
+    return diff_hat, (ci_low, ci_high), diff_samples, p_diff_le_0
+
+
+
+
+
+
+
+
+
+
+
+
 from RINAMI_model_main import RINAMI_for_foldability_prediction as RINAMI
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -271,7 +360,7 @@ def test_model_with_Rocklin_benchmark_set(trained_model_param, ESM_size, num_epo
             foldability_label = 0
         
         AF_pLDDT_3rec_and_label[0].append(foldability_label)
-        AF_pLDDT_3rec_and_label[1].append(benchmark_data_dict[design_name]['AF_pLDDT_3rec'])
+        AF_pLDDT_3rec_and_label[1].append(benchmark_data_dict[design_name]['AF_pLDDT_3rec']/100)
 
 
         foldability_label_test_data.append(foldability_label)
@@ -286,7 +375,7 @@ def test_model_with_Rocklin_benchmark_set(trained_model_param, ESM_size, num_epo
     p_f_list, e_f_list, p_f_probs = [], [], []
     model.eval()
     steps_test = max(1, math.ceil(len(seq_list_test_data)/batch_size))
-    batch_list_test = batch_maker_for_inputs(seq_list_test_data, struct_list_test_data, mpnn_profile_test_data, foldability_label_test_data, batch_size)
+    batch_list_test = batch_maker_for_inputs(seq_list_test_data, struct_list_test_data, mpnn_profile_test_data, foldability_label_test_data, batch_size, random_shuffle=False)
 
     with torch.no_grad():
         for batch in tqdm.tqdm(batch_list_test):
@@ -330,8 +419,8 @@ def test_model_with_Rocklin_benchmark_set(trained_model_param, ESM_size, num_epo
 
     auc_roc_AF_pLDDT_3rec    = float(roc_auc_score(np.array(AF_pLDDT_3rec_and_label[0], dtype=int), np.array(AF_pLDDT_3rec_and_label[1], dtype=float) ))
     
-    
-    return auc_roc, auc_roc_AF_pLDDT_3rec, true_pos_count, true_neg_count
+
+    return p_f_probs, AF_pLDDT_3rec_and_label[1], AF_pLDDT_3rec_and_label[0], auc_roc, auc_roc_AF_pLDDT_3rec, true_pos_count, true_neg_count
 
 
 
@@ -357,13 +446,13 @@ if __name__ == "__main__":
        print('basic training step')
        train_model(args[1], num_epochs=1, dropout=0., ESM_size=ESM_dim)
 
-   elif len(args) == 3 and args[-2]!='test_mode':
+   elif len(args) == 3:
        ESM_dim = 320
        print('Training mode...')
        print(f'training step')
        train_model(args[1], trained_model_param=args[2], num_epochs=1, dropout=0., ESM_size=ESM_dim)
    
-   elif len(args) == 3 and args[-2]=='test_mode':
+   elif len(args) == 4:
         ESM_dim = 320
         trained_model_path = args[-1]
 
@@ -377,7 +466,25 @@ if __name__ == "__main__":
         true_neg_num_list             = []
         for seq_len_threshold in seq_len_threshold_list:
             print(f'***************************************************************************************************************************************************************************************************************************************\nseq_len_threshold = {seq_len_threshold}')
-            roc_auc, auc_roc_AF_pLDDT_3rec, tpc, tnc = test_model_with_Rocklin_benchmark_set(trained_model_path, ESM_size=ESM_dim, seq_len_threshold=seq_len_threshold)
+            foldability_prob_RINAMI, AF2_plddt, exp_foldability, roc_auc, auc_roc_AF_pLDDT_3rec, tpc, tnc = test_model_with_Rocklin_benchmark_set(trained_model_path, ESM_size=ESM_dim, seq_len_threshold=seq_len_threshold)
+            
+            #Bootstrap test for the predictive accuracy of RINAMI, AF2 and the predictive power difference between them
+            B = 10000
+            seed_base = 1234 + int(seq_len_threshold)
+
+            auc_r_hat, (auc_r_lo, auc_r_hi), _, p_r_le_0p5 = _bootstrap_auc_ci(exp_foldability, foldability_prob_RINAMI, B=B, seed=seed_base)
+            auc_a_hat, (auc_a_lo, auc_a_hi), _, p_a_le_0p5 = _bootstrap_auc_ci(exp_foldability, AF2_plddt, B=B, seed=seed_base+1)
+
+            diff_hat, (diff_lo, diff_hi), _, p_diff_le_0 = _paired_bootstrap_auc_diff_ci(
+                exp_foldability, foldability_prob_RINAMI, AF2_plddt, B=B, seed=seed_base+2
+            )
+
+            print(
+                f"[BOOTSTRAP] RINAMI AUC={auc_r_hat:.4f} 95%CI[{auc_r_lo:.4f},{auc_r_hi:.4f}]  P(AUC<=0.5)={p_r_le_0p5:.4g}\n"
+                f"[BOOTSTRAP] AF     AUC={auc_a_hat:.4f} 95%CI[{auc_a_lo:.4f},{auc_a_hi:.4f}]  P(AUC<=0.5)={p_a_le_0p5:.4g}\n"
+                f"[BOOTSTRAP] ΔAUC (R-AF)={diff_hat:.4f} 95%CI[{diff_lo:.4f},{diff_hi:.4f}]  P(Δ<=0)={p_diff_le_0:.4g}"
+            )
+            
             ROC_AUC_list.append(roc_auc)
             auc_roc_AF_pLDDT_3rec_list.append(auc_roc_AF_pLDDT_3rec)
 
