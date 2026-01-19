@@ -9,9 +9,9 @@ import os
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-####################################
-# pos. enc. for each node from GNN #
-####################################
+#####################################
+# Pos. enc. for each representation #
+#####################################
 class PositionalEncoding(nn.Module):
     def __init__(self, d_model, max_len=1000):
         super().__init__()
@@ -28,7 +28,7 @@ class PositionalEncoding(nn.Module):
 def create_padded_positional_encodings(pe: PositionalEncoding, lengths: list[int]):
     """
     Args:
-        pe: PositionalEncoding インスタンス
+        pe: PositionalEncoding ()
         lengths: 各配列の長さのリスト [L1, L2, ..., Ln]
 
     Returns:
@@ -89,7 +89,7 @@ class aa_seq2representation(nn.Module):
             vector_outputs: tensor -> shape: [batch_size, max_seq_len, embed_dim] 
             attention_masks: attention_mask_tensor -> shape: [batch_size, max_seq_len] (0: PAD, 1: valid token)
         '''
-        last_layer_ind = self.n_layers  # output layer of the ESM
+        last_layer_ind = self.n_layers  # Output layer of the ESM
         
         len_list = [len(seq) for seq in seq_list]
         max_len = max(len_list)
@@ -102,7 +102,7 @@ class aa_seq2representation(nn.Module):
         embed_dim = results["representations"][last_layer_ind].shape[-1]
         batch_size = len(seq_list)
 
-        # パディング用のゼロテンソルを作成
+        # Making a zero tensor for using in a padding process
         vector_outputs = torch.zeros((batch_size, max_len, embed_dim))
         attention_masks = torch.zeros((batch_size, max_len), dtype=torch.int32)
 
@@ -206,7 +206,6 @@ class MLP(nn.Module):
 
         super().__init__()
         self.desc_skip_connection = True
-        #print('dropout is {}'.format(dropout))
 
         self.linear_1     = nn.Linear(emb_dim, emb_dim)
         self.dropout_1    = nn.Dropout(dropout)
