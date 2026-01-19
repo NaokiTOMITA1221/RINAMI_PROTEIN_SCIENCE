@@ -145,13 +145,13 @@ class MultiHeadCrossAttention(nn.Module):
         self.projection_v = nn.Linear(struct_dim, heads * dim_head, bias=False)
         self.linear_out   = nn.Linear(heads * dim_head, struct_dim)
         
-        self.layer_norm = nn.LayerNorm(struct_dim) #unused
 
     def forward(self, sequence, structure, seq_mask, struct_mask, attn_map_out=False):
         b, _, _, h = *sequence.shape, self.heads
+        seq_len = sequence.shape[1]
         
         # Project sequence into query space
-        q = self.projection_q(sequence).view(b, seq_mask, self.heads, -1).transpose(1, 2)
+        q = self.projection_q(sequence).view(b, seq_len, self.heads, -1).transpose(1, 2)
         
         # Project structure into key and value space
         struct_len = structure.shape[1]
@@ -162,9 +162,9 @@ class MultiHeadCrossAttention(nn.Module):
         dots = torch.matmul(q, k.transpose(-2, -1)) * self.scale
         
         # Apply masks
-        seq_mask = seq_mask.unsqueeze(1).unsqueeze(-1).expand(-1, self.heads, n, struct_len)
+        seq_mask = seq_mask.unsqueeze(1).unsqueeze(-1).expand(-1, self.heads, seq_len, struct_len)
         masked_dots = dots.masked_fill(seq_mask == 0, -1e6)
-        struct_mask = struct_mask.unsqueeze(1).unsqueeze(-2).expand(-1, self.heads, n, struct_len)
+        struct_mask = struct_mask.unsqueeze(1).unsqueeze(-2).expand(-1, self.heads, seq_len, struct_len)
         masked_dots = masked_dots.masked_fill(struct_mask == 0, -1e6)
         
         # Apply softmax to compute attention weights
@@ -172,10 +172,10 @@ class MultiHeadCrossAttention(nn.Module):
         
         # Compute output
         out = torch.matmul(attn, v)
-        out = out.transpose(1, 2).contiguous().view(b, n, -1)
+        out = out.transpose(1, 2).contiguous().view(b, seq_len, -1)
 
         #skip connection
-        out = self.to_out(out) + structure
+        out = self.linear_out(out) + structure
             
         if attn_map_out:
             return out, attn
