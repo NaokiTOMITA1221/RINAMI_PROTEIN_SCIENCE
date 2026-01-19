@@ -133,7 +133,7 @@ class MultiHeadCrossAttention(nn.Module):
     - reweighted structure representation: (batch_size, struct_len, struct_dim)
     """
 
-    def __init__(self, seq_dim=128, struct_dim=120, heads=20, dim_head=128):
+    def __init__(self, seq_dim=128, struct_dim=128, heads=20, dim_head=128):
         super().__init__()
         self.seq_dim = seq_dim
         self.struct_dim = struct_dim
@@ -148,10 +148,10 @@ class MultiHeadCrossAttention(nn.Module):
         self.layer_norm = nn.LayerNorm(struct_dim) #unused
 
     def forward(self, sequence, structure, seq_mask, struct_mask, attn_map_out=False):
-        b, n, _, h = *sequence.shape, self.heads
+        b, _, _, h = *sequence.shape, self.heads
         
         # Project sequence into query space
-        q = self.projection_q(sequence).view(b, n, self.heads, -1).transpose(1, 2)
+        q = self.projection_q(sequence).view(b, seq_mask, self.heads, -1).transpose(1, 2)
         
         # Project structure into key and value space
         struct_len = structure.shape[1]
