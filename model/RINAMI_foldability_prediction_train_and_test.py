@@ -16,128 +16,12 @@ import math
 from sklearn.metrics import accuracy_score
 import matplotlib.pyplot as plt
 import seaborn as sns
-
+from RINAMI_model_main import RINAMI_for_foldability_prediction as RINAMI
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 
-# ==============================================================
-# モデル本体（既存・一部軽微な安全化のみ）
-# ==============================================================
-
-class RINAMI(nn.Module):
-    def __init__(self, device=device, dropout=0.0, ESM_size=320):
-        super().__init__()
-        self.device = device
-        self.dropout_rate = dropout
-
-        self.in_dim            = 128
-        self.profile_dim       = 20
-        self.pe_dim            = 256
-        self.mid_dim           = 128
-        self.aa_rep_dim        = ESM_size
-        
-        self.aa_seq_encoder     = layers.aa_seq2representation(model_size=self.aa_rep_dim) 
-        
-        self.dropout = nn.Dropout(p=dropout)
-
-        # Positional encoding
-        self.pos_enc              = layers.PositionalEncoding(self.pe_dim  )
-        self.MLP_pe_node_rep      = layers.MLP(self.pe_dim  , self.mid_dim)
-        self.MLP_pe_aa_seq        = layers.MLP(self.pe_dim  , self.mid_dim)
-
-        # Batch Norm
-        self.bn_refine_aa   = nn.BatchNorm1d(self.mid_dim)
-        self.bn_refine_node = nn.BatchNorm1d(self.mid_dim)
-        self.bn_ic1         = nn.BatchNorm1d(self.mid_dim)
-        self.bn_ic2         = nn.BatchNorm1d(self.mid_dim)
-        self.bn_ic3         = nn.BatchNorm1d(self.mid_dim)
-
-        # Layer Norm
-        self.layer_norm_aa_seq_rep   = nn.LayerNorm(self.aa_rep_dim)
-        self.layer_norm_node_rep     = nn.LayerNorm(self.in_dim+self.profile_dim)
-        self.layer_norm_interaction1 = nn.LayerNorm(self.mid_dim)
-        self.layer_norm_interaction2 = nn.LayerNorm(self.mid_dim)
-        self.layer_norm_interaction3 = nn.LayerNorm(self.mid_dim)
-
-        # Projections
-        self.ProteinMPNN_rep_refine     = layers.MLP(self.in_dim+self.profile_dim, self.mid_dim)
-        self.ESM_rep_refine             = layers.MLP(self.aa_rep_dim, self.mid_dim)
-
-        # MultiHeadCrossAttention
-        self.CA_aa_seq_rep_and_node_rep = layers.MultiHeadCrossAttention(self.mid_dim, self.mid_dim, heads=20, dim_head=128)
-
-        # Interaction_converter
-        self.interaction_converter1 = layers.MLP(self.mid_dim, self.mid_dim)
-        self.interaction_converter2 = layers.MLP(self.mid_dim, self.mid_dim)
-        self.interaction_converter3 = layers.MLP(self.mid_dim, self.mid_dim)
-        self.interaction_converter4 = layers.MLP(self.mid_dim, 20)
-
-        #helper function for batch normalization with mask
-        # x: [B, L, D], bn: nn.BatchNorm1d(D), mask: [B, L]
-        def _bn_seq(x, bn, mask=None):
-            B, L, D = x.shape
-            x2 = x.reshape(B*L, D)
-            if mask is not None:
-                m = mask.reshape(B*L)
-                if m.any():
-                    x2_valid = bn(x2[m])
-                    x2 = x2.clone()
-                    x2[m] = x2_valid
-                return x2.view(B, L, D)
-            else:
-                return bn(x2).view(B, L, D)
-        self._bn_seq = _bn_seq
-
-    def forward(self, seq_list, feat_path_list, profile_path_list):
-        # getting the embedding of the protein aa sequences
-        aa_seq_reps, aa_seq_mask = self.aa_seq_encoder(seq_list)
-        aa_seq_onehots = aa_sequences_to_padded_onehot(seq_list).to(self.device)
-        
-        # loading the ProteinMPNN node representation and output profile
-        feat_list      = [torch.load(path, weights_only=True)[0] for path in feat_path_list]
-        profiles       = [np.load(path).T for path in profile_path_list]
-        node_reps      = pad_feature_matrices(feat_list).to(self.device)
-        profiles       = pad_feature_matrices(profiles).to(self.device)
-
-        # concat the node representation and output profile
-        concated_node_reps   = torch.concat([node_reps, profiles], dim=-1)
-
-        # check the sequence lengthes and make mask
-        seq_lengths = torch.tensor([len(seq) for seq in seq_list], device=self.device)
-        max_len     = int(seq_lengths.max().item())
-        node_mask   = torch.arange(max_len, device=self.device)[None, :] < seq_lengths[:, None]
-
-        # make positional encoding
-        pe,_ = layers.create_padded_positional_encodings(self.pos_enc, seq_lengths)
-
-        # refine the structural- and sequence-representations and add PE to refined representations
-        refined_aa_seq_reps = self.ESM_rep_refine(self.layer_norm_aa_seq_rep(aa_seq_reps))
-        refined_aa_seq_reps = self.dropout(self._bn_seq(refined_aa_seq_reps, self.bn_refine_aa, aa_seq_mask)) + self.MLP_pe_aa_seq(pe.to(self.device))
-        refined_node_reps   = self.ProteinMPNN_rep_refine(self.layer_norm_node_rep(concated_node_reps)) + self.MLP_pe_node_rep(pe.to(self.device))
-        refined_node_reps   = self.dropout(self._bn_seq(refined_node_reps, self.bn_refine_node, node_mask))
-
-        # CrossAttention
-        interaction = self.CA_aa_seq_rep_and_node_rep(
-                    refined_aa_seq_reps,
-                    refined_node_reps,
-                    aa_seq_mask,
-                    node_mask
-                    )
-
-        # MLPヘッド
-        h = self.interaction_converter1(self.layer_norm_interaction1(interaction))
-        h = self._bn_seq(h, self.bn_ic1, node_mask); h = F.gelu(h); h = self.dropout(h)
-        h = self._bn_seq(self.interaction_converter2(self.layer_norm_interaction2(h)), self.bn_ic2, node_mask); h = F.gelu(h); h = self.dropout(h)
-        h = self._bn_seq(self.interaction_converter3(self.layer_norm_interaction3(h)), self.bn_ic3, node_mask); h = F.gelu(h); h = self.dropout(h)
-        scores = self.interaction_converter4(h)
-        
-        mask_to_hadamard = node_mask.unsqueeze(-1)
-        hadamard = torch.mul(scores, aa_seq_onehots) * mask_to_hadamard
-        
-        foldability_logit = hadamard.sum(dim=(1, 2))
-        return foldability_logit
 
 
 # ==============================================================
