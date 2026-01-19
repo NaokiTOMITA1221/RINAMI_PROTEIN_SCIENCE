@@ -1,21 +1,10 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import pandas as pd
-import tqdm
 import layers
-from sklearn.metrics import roc_auc_score, average_precision_score, precision_recall_curve
-from util import batch_maker_for_inputs, aa_sequences_to_padded_onehot, pad_feature_matrices, make_balanced_minibatch_indices, gather_batch_by_indices, undersample_pos_to_match_neg, get_sequence_from_single_chain_pdb
-import gc
-from transformers import get_cosine_schedule_with_warmup
 import numpy as np
-import json
-import glob
-import sys
 import math
-from sklearn.metrics import accuracy_score
-import matplotlib.pyplot as plt
-import seaborn as sns
+
 
 class RINAMI_for_foldability_prediction(nn.Module):
     def __init__(self, device=device, dropout=0.0, ESM_size=320):
