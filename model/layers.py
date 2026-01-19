@@ -202,31 +202,31 @@ class MLP(nn.Module):
     - z: tensor, the output of the network
     """
 
-    def __init__(self, emb_dim, num_classes, dropout=0.0):
+    def __init__(self, emb_dim, out_dim, dropout=0.0):
 
         super().__init__()
         self.desc_skip_connection = True
         #print('dropout is {}'.format(dropout))
 
-        self.fc1 = nn.Linear(emb_dim, emb_dim)
-        self.dropout1 = nn.Dropout(dropout)
-        self.act1 = nn.GELU()
-        self.fc2 = nn.Linear(emb_dim, emb_dim)
-        self.dropout2 = nn.Dropout(dropout)
-        self.act2 = nn.GELU()
-        self.final = nn.Linear(emb_dim, num_classes)
+        self.linear_1     = nn.Linear(emb_dim, emb_dim)
+        self.dropout_1    = nn.Dropout(dropout)
+        self.act_1        = nn.GELU()
+        self.linear_2     = nn.Linear(emb_dim, emb_dim)
+        self.dropout_2    = nn.Dropout(dropout)
+        self.act_2        = nn.GELU()
+        self.final_linear = nn.Linear(emb_dim, out_dim)
 
-    def forward(self, inter_emb):
-        x_out = self.fc1(inter_emb)
-        x_out = self.dropout1(x_out)
-        x_out = self.act1(x_out)
+    def forward(self, init_emb):
+        x_out = self.linear_1(init_emb)
+        x_out = self.dropout_1(x_out)
+        x_out = self.act_1(x_out)
 
-        x_out = x_out + inter_emb
+        x_out = x_out + init_emb
 
-        z = self.fc2(x_out)
-        z = self.dropout2(z)
-        z = self.act2(z)
-        z = self.final(z + x_out)
+        z = self.linear_2(x_out)
+        z = self.dropout_2(z)
+        z = self.act_2(z)
+        z = self.final_linear(z + x_out)
 
         return z
 
