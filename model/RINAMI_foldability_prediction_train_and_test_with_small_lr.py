@@ -4,8 +4,8 @@ import torch.nn.functional as F
 import pandas as pd
 import tqdm
 import layers
-from sklearn.metrics import roc_auc_score, average_precision_score, precision_recall_curve
-from util import batch_maker_for_inputs, aa_sequences_to_padded_onehot, pad_feature_matrices, make_balanced_minibatch_indices, gather_batch_by_indices, undersample_pos_to_match_neg, get_sequence_from_single_chain_pdb
+from sklearn.metrics import roc_auc_score, average_precision_score, precision_recall_curve, accuracy_score
+from util import batch_maker_for_inputs, aa_sequences_to_padded_onehot, pad_feature_matrices, make_balanced_minibatch_indices, gather_batch_by_indices, undersample_pos_to_match_neg, get_sequence_from_single_chain_pdb, _bootstrap_auc_ci, _paired_bootstrap_auc_diff_ci
 import gc
 from transformers import get_cosine_schedule_with_warmup
 import numpy as np
@@ -13,106 +13,13 @@ import json
 import glob
 import sys
 import math
-from sklearn.metrics import accuracy_score
 import matplotlib.pyplot as plt
 import seaborn as sns
-
-
-
-
-def _bootstrap_auc_ci(y_true, y_score, B=10000, seed=0, alpha=0.05):
-    """
-    y_true: (N,) 0/1
-    y_score:(N,) continuous score
-    returns: (auc_hat, (ci_low, ci_high), auc_samples, p_auc_le_0p5)
-    """
-    rng = np.random.default_rng(seed)
-    y_true = np.asarray(y_true, dtype=int)
-    y_score = np.asarray(y_score, dtype=float)
-    N = y_true.shape[0]
-
-    # point estimate
-    auc_hat = float(roc_auc_score(y_true, y_score))
-
-    auc_samples = []
-    for _ in range(B):
-        idx = rng.integers(0, N, size=N)  # resample with replacement
-        y_b = y_true[idx]
-        s_b = y_score[idx]
-        # bootstrap sample may have only one class -> AUC undefined
-        if len(np.unique(y_b)) < 2:
-            continue
-        auc_samples.append(float(roc_auc_score(y_b, s_b)))
-
-    auc_samples = np.array(auc_samples, dtype=float)
-    if auc_samples.size == 0:
-        return auc_hat, (float('nan'), float('nan')), auc_samples, float('nan')
-
-    ci_low = float(np.quantile(auc_samples, alpha/2))
-    ci_high = float(np.quantile(auc_samples, 1 - alpha/2))
-
-    # "individual bootstrap test": how often AUC <= 0.5 under bootstrap distribution
-    # (interpretation: if this is small, model is very likely > random)
-    p_auc_le_0p5 = float((auc_samples <= 0.5).mean())
-
-    return auc_hat, (ci_low, ci_high), auc_samples, p_auc_le_0p5
-
-
-def _paired_bootstrap_auc_diff_ci(y_true, score_a, score_b, B=10000, seed=0, alpha=0.05):
-    """
-    paired bootstrap for AUC difference: AUC(score_a) - AUC(score_b)
-    returns: (diff_hat, (ci_low, ci_high), diff_samples, p_diff_le_0)
-    """
-    rng = np.random.default_rng(seed)
-    y_true = np.asarray(y_true, dtype=int)
-    score_a = np.asarray(score_a, dtype=float)
-    score_b = np.asarray(score_b, dtype=float)
-    N = y_true.shape[0]
-
-    diff_hat = float(roc_auc_score(y_true, score_a) - roc_auc_score(y_true, score_b))
-
-    diff_samples = []
-    for _ in range(B):
-        idx = rng.integers(0, N, size=N)
-        y_b = y_true[idx]
-        a_b = score_a[idx]
-        b_b = score_b[idx]
-        if len(np.unique(y_b)) < 2:
-            continue
-        da = roc_auc_score(y_b, a_b)
-        db = roc_auc_score(y_b, b_b)
-        diff_samples.append(float(da - db))
-
-    diff_samples = np.array(diff_samples, dtype=float)
-    if diff_samples.size == 0:
-        return diff_hat, (float('nan'), float('nan')), diff_samples, float('nan')
-
-    ci_low = float(np.quantile(diff_samples, alpha/2))
-    ci_high = float(np.quantile(diff_samples, 1 - alpha/2))
-
-    # probability that diff <= 0 in bootstrap distribution
-    p_diff_le_0 = float((diff_samples <= 0.0).mean())
-
-    return diff_hat, (ci_low, ci_high), diff_samples, p_diff_le_0
-
-
-
-
-
-
-
-
-
-
-
-
 from RINAMI_model_main import RINAMI_for_foldability_prediction as RINAMI
 
+#Loading device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# ==============================================================
-# 学習（不均衡対策込み）
-# ==============================================================
 
 def train_model(model_save_path, trained_model_param=None, num_epochs=5, batch_size=128, dropout=0., pth_ind=None, ESM_size=320):
     decoy_to_seq_dict = json.load(open('../processed_data/decoy_to_seq_dict.json'))
@@ -135,7 +42,7 @@ def train_model(model_save_path, trained_model_param=None, num_epochs=5, batch_s
         struct_list_train_data.append(f'../processed_data/Mega_ProteinMPNN_node_rep/decoy_{name}.pt')
         mpnn_profile_train_data.append(f'../processed_data/Mega_ProteinMPNN_output_profile/decoy_{name}_profile.npy')
         seq_list_train_data.append(aa_seq)
-        dG_list_train_data.append(-1)  # デコイは負扱い（<=0）
+        dG_list_train_data.append(-1)  #Decoy is treated as non-foldable data.
 
     ############################
     # Loading validation data  #
@@ -313,9 +220,9 @@ def train_model(model_save_path, trained_model_param=None, num_epochs=5, batch_s
     torch.save(model.state_dict(), model_save_path)
 
 
-# ==============================================================
-# 検証／テスト（指標強化版）
-# ==============================================================
+
+
+
 
 def test_model_with_Rocklin_benchmark_set(trained_model_param, ESM_size, num_epochs=1, batch_size=1, lr=3e-5, dropout=0., pth_ind=None, threshold = 0.5, seq_len_threshold=300):
     header_to_label = {}

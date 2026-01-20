@@ -121,9 +121,9 @@ class aa_seq2representation(nn.Module):
 
 
 
-####################################################################
-# Cross attention for processing Graph datas and sequene embedding #
-####################################################################
+################################################################################
+# MultiHeadCrossAttention for integrating structure and sequene represetations #
+################################################################################
 class MultiHeadCrossAttention(nn.Module):
     """
     Args:
@@ -188,7 +188,7 @@ class MultiHeadCrossAttention(nn.Module):
 
 
 ##########################
-# template of MLP layer  #
+# Template of MLP layer  #
 ##########################
 class MLP(nn.Module):
     """_summary_
