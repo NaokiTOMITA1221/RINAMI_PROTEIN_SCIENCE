@@ -224,7 +224,7 @@ class MLP(nn.Module):
         out = self.act_2(out)
         out = self.final_linear(out + temp)
 
-        return z
+        return out
 
 
 
