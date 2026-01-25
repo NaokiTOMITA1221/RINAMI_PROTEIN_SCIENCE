@@ -3,7 +3,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import pandas as pd
 import tqdm
-import layers
 from util import batch_maker_for_inputs, aa_sequences_to_padded_onehot, pad_feature_matrices
 import gc
 from transformers import get_cosine_schedule_with_warmup

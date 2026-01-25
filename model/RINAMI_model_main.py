@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import layers
+import modules
 import numpy as np
 import math
 
@@ -18,14 +18,14 @@ class RINAMI_for_foldability_prediction(nn.Module):
         self.mid_dim           = 128
         self.aa_rep_dim        = ESM_size
         
-        self.aa_seq_encoder     = layers.aa_seq2representation(model_size=self.aa_rep_dim)
+        self.aa_seq_encoder     = modules.aa_seq2representation(model_size=self.aa_rep_dim)
         
         self.dropout = nn.Dropout(p=dropout)
 
         #Positional encoding
-        self.pos_enc              = layers.PositionalEncoding(self.pe_dim  )
-        self.MLP_pe_node_rep      = layers.MLP(self.pe_dim  , self.mid_dim)
-        self.MLP_pe_aa_seq        = layers.MLP(self.pe_dim  , self.mid_dim)
+        self.pos_enc              = modules.PositionalEncoding(self.pe_dim  )
+        self.MLP_pe_node_rep      = modules.MLP(self.pe_dim  , self.mid_dim)
+        self.MLP_pe_aa_seq        = modules.MLP(self.pe_dim  , self.mid_dim)
 
         #Batch Norm
         self.bn_refine_aa   = nn.BatchNorm1d(self.mid_dim)
@@ -42,17 +42,17 @@ class RINAMI_for_foldability_prediction(nn.Module):
         self.layer_norm_interaction3 = nn.LayerNorm(self.mid_dim)
 
         #Projections
-        self.ProteinMPNN_rep_refine     = layers.MLP(self.in_dim+self.profile_dim, self.mid_dim)
-        self.ESM_rep_refine             = layers.MLP(self.aa_rep_dim, self.mid_dim)
+        self.ProteinMPNN_rep_refine     = modules.MLP(self.in_dim+self.profile_dim, self.mid_dim)
+        self.ESM_rep_refine             = modules.MLP(self.aa_rep_dim, self.mid_dim)
 
         #MultiHeadCrossAttention
-        self.CA_aa_seq_rep_and_node_rep = layers.MultiHeadCrossAttention(self.mid_dim, self.mid_dim, heads=20, dim_head=128)
+        self.CA_aa_seq_rep_and_node_rep = modules.MultiHeadCrossAttention(self.mid_dim, self.mid_dim, heads=20, dim_head=128)
 
         # Interaction_converter
-        self.interaction_converter1 = layers.MLP(self.mid_dim, self.mid_dim)
-        self.interaction_converter2 = layers.MLP(self.mid_dim, self.mid_dim)
-        self.interaction_converter3 = layers.MLP(self.mid_dim, self.mid_dim)
-        self.interaction_converter4 = layers.MLP(self.mid_dim, 20)
+        self.interaction_converter1 = modules.MLP(self.mid_dim, self.mid_dim)
+        self.interaction_converter2 = modules.MLP(self.mid_dim, self.mid_dim)
+        self.interaction_converter3 = modules.MLP(self.mid_dim, self.mid_dim)
+        self.interaction_converter4 = modules.MLP(self.mid_dim, 20)
 
         #helper function for batch normalization with mask
         # x: [B, L, D], bn: nn.BatchNorm1d(D), mask: [B, L]
@@ -94,7 +94,7 @@ class RINAMI_for_foldability_prediction(nn.Module):
         max_len     = max(seq_lengths)
         node_mask   = torch.arange(max_len, device=self.device)[None, :] < seq_lengths[:, None]  # [B, L]
         
-        pe,_ = layers.create_padded_positional_encodings(self.pos_enc, seq_lengths)
+        pe,_ = modules.create_padded_positional_encodings(self.pos_enc, seq_lengths)
 
         #Projecting the reps and profiles
         refined_aa_seq_reps = self.ESM_rep_refine(self.layer_norm_aa_seq_rep(aa_seq_reps))
@@ -153,15 +153,15 @@ class RINAMI_for_dG_regression(nn.Module):
         self.mid_dim           = 128
         self.aa_rep_dim        = ESM_size
         
-        self.aa_seq_encoder     = layers.aa_seq2representation(model_size=self.aa_rep_dim)
+        self.aa_seq_encoder     = modules.aa_seq2representation(model_size=self.aa_rep_dim)
         
         #Dropout
         self.dropout = nn.Dropout(p=dropout)
 
         #Positional encoding
-        self.pos_enc              = layers.PositionalEncoding(self.pe_dim  )
-        self.MLP_pe_node_rep      = layers.MLP(self.pe_dim  , self.mid_dim)
-        self.MLP_pe_aa_seq        = layers.MLP(self.pe_dim  , self.mid_dim)
+        self.pos_enc              = modules.PositionalEncoding(self.pe_dim  )
+        self.MLP_pe_node_rep      = modules.MLP(self.pe_dim  , self.mid_dim)
+        self.MLP_pe_aa_seq        = modules.MLP(self.pe_dim  , self.mid_dim)
 
         # Batch Norm
         self.bn_refine_aa   = nn.BatchNorm1d(self.mid_dim)
@@ -179,18 +179,18 @@ class RINAMI_for_dG_regression(nn.Module):
         self.layer_norm_interaction3 = nn.LayerNorm(self.mid_dim)
 
         # Projections
-        self.ProteinMPNN_rep_refine     = layers.MLP(self.in_dim+self.profile_dim, self.mid_dim)
-        self.ESM_rep_refine             = layers.MLP(self.aa_rep_dim, self.mid_dim)
+        self.ProteinMPNN_rep_refine     = modules.MLP(self.in_dim+self.profile_dim, self.mid_dim)
+        self.ESM_rep_refine             = modules.MLP(self.aa_rep_dim, self.mid_dim)
 
         # MultiHeadCrossAttention
-        self.CA_aa_seq_rep_and_node_rep = layers.MultiHeadCrossAttention(self.mid_dim, self.mid_dim, heads=20, dim_head=128)
+        self.CA_aa_seq_rep_and_node_rep = modules.MultiHeadCrossAttention(self.mid_dim, self.mid_dim, heads=20, dim_head=128)
 
         
         # Interaction_converter
-        self.interaction_converter1 = layers.MLP(self.mid_dim, self.mid_dim)
-        self.interaction_converter2 = layers.MLP(self.mid_dim, self.mid_dim)
-        self.interaction_converter3 = layers.MLP(self.mid_dim, self.mid_dim)
-        self.interaction_converter4 = layers.MLP(self.mid_dim, 20)
+        self.interaction_converter1 = modules.MLP(self.mid_dim, self.mid_dim)
+        self.interaction_converter2 = modules.MLP(self.mid_dim, self.mid_dim)
+        self.interaction_converter3 = modules.MLP(self.mid_dim, self.mid_dim)
+        self.interaction_converter4 = modules.MLP(self.mid_dim, 20)
 
         #helper function for batch normalization with mask
         # x: [B, L, D], bn: nn.BatchNorm1d(D), mask: [B, L]
@@ -232,7 +232,7 @@ class RINAMI_for_dG_regression(nn.Module):
         max_len     = max(seq_lengths)
         node_mask   = torch.arange(max_len, device=self.device)[None, :] < seq_lengths[:, None]  # [B, L]
         
-        pe,_ = layers.create_padded_positional_encodings(self.pos_enc, seq_lengths)
+        pe,_ = modules.create_padded_positional_encodings(self.pos_enc, seq_lengths)
 
         #Projecting the reps and profiles
         refined_aa_seq_reps = self.ESM_rep_refine(self.layer_norm_aa_seq_rep(aa_seq_reps))

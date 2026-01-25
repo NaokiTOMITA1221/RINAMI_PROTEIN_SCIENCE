@@ -29,7 +29,7 @@ def create_padded_positional_encodings(pe: PositionalEncoding, lengths: list[int
     """
     Args:
         pe: PositionalEncoding ()
-        lengths: 各配列の長さのリスト [L1, L2, ..., Ln]
+        lengths: list of length of each sequence ( [L1, L2, ..., Ln] )
 
     Returns:
         padded_tensor: (batch_size, max_len, d_model)
@@ -127,10 +127,10 @@ class aa_seq2representation(nn.Module):
 class MultiHeadCrossAttention(nn.Module):
     """
     Args:
-    - sequence representation : (batch_size, seq_len, seq_dim)
-    - structure representation: (batch_size, struct_len, struct_dim)
+      sequence representation : (batch_size, seq_len, seq_dim)
+      structure representation: (batch_size, struct_len, struct_dim)
     Returns:
-    - reweighted structure representation: (batch_size, struct_len, struct_dim)
+      reweighted structure representation: (batch_size, struct_len, struct_dim)
     """
 
     def __init__(self, seq_dim=128, struct_dim=128, heads=20, dim_head=128):
@@ -191,15 +191,14 @@ class MultiHeadCrossAttention(nn.Module):
 # Template of MLP layer  #
 ##########################
 class MLP(nn.Module):
-    """_summary_
-
+    """
     Args:
-    - emb_dim: int, the dimension of the intermediate embeddings
-    - num_classes: int, the number of classes to predict
-    - dropout: float, the dropout rate
+      emb_dim: dimension of input
+      out_dim: dimension of output
+      dropout: dropout rate
 
     Returns:
-    - z: tensor, the output of the network
+      out: converted tensor (shape is [batch_size, sequence_length, out_dim])
     """
 
     def __init__(self, emb_dim, out_dim, dropout=0.0):
@@ -216,16 +215,16 @@ class MLP(nn.Module):
         self.final_linear = nn.Linear(emb_dim, out_dim)
 
     def forward(self, init_emb):
-        x_out = self.linear_1(init_emb)
-        x_out = self.dropout_1(x_out)
-        x_out = self.act_1(x_out)
+        temp = self.linear_1(init_emb)
+        temp = self.dropout_1(temp)
+        temp = self.act_1(temp)
 
-        x_out = x_out + init_emb
+        temp = temp + init_emb
 
-        z = self.linear_2(x_out)
-        z = self.dropout_2(z)
-        z = self.act_2(z)
-        z = self.final_linear(z + x_out)
+        out = self.linear_2(temp)
+        out = self.dropout_2(out)
+        out = self.act_2(out)
+        out = self.final_linear(out + temp)
 
         return z
 
