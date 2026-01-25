@@ -5,6 +5,7 @@ import modules
 import numpy as np
 import math
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class RINAMI_for_foldability_prediction(nn.Module):
     def __init__(self, device=device, dropout=0.0, ESM_size=320):
