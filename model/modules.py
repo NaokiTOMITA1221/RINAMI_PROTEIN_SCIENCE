@@ -204,8 +204,6 @@ class MLP(nn.Module):
     def __init__(self, emb_dim, out_dim, dropout=0.0):
 
         super().__init__()
-        self.desc_skip_connection = True
-
         self.linear_1     = nn.Linear(emb_dim, emb_dim)
         self.dropout_1    = nn.Dropout(dropout)
         self.act_1        = nn.GELU()
