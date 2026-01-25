@@ -193,9 +193,7 @@ class MultiHeadCrossAttention(nn.Module):
 class MLP(nn.Module):
     """
     Args:
-      emb_dim: dimension of input
-      out_dim: dimension of output
-      dropout: dropout rate
+      init_emb: input tensor (shape is [batch_size, sequence_length, emb_dim])
 
     Returns:
       out: converted tensor (shape is [batch_size, sequence_length, out_dim])
