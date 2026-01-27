@@ -150,31 +150,29 @@ class MultiHeadCrossAttention(nn.Module):
         b, _, _, h = *sequence.shape, self.heads
         seq_len = sequence.shape[1]
         
-        # Project sequence into query space
+        # Convert sequence into query
         q = self.projection_q(sequence).view(b, seq_len, self.heads, -1).transpose(1, 2)
         
-        # Project structure into key and value space
+        # Convert structure into key and value
         struct_len = structure.shape[1]
         k = self.projection_k(structure).view(b, struct_len, self.heads, -1).transpose(1, 2)
         v = self.projection_v(structure).view(b, struct_len, self.heads, -1).transpose(1, 2)
         
-        # Compute attention weights
+        # Make attention map
         dots = torch.matmul(q, k.transpose(-2, -1)) * self.scale
         
-        # Apply masks
         seq_mask = seq_mask.unsqueeze(1).unsqueeze(-1).expand(-1, self.heads, seq_len, struct_len)
         masked_dots = dots.masked_fill(seq_mask == 0, -1e6)
         struct_mask = struct_mask.unsqueeze(1).unsqueeze(-2).expand(-1, self.heads, seq_len, struct_len)
         masked_dots = masked_dots.masked_fill(struct_mask == 0, -1e6)
         
-        # Apply softmax to compute attention weights
         attn = F.softmax(masked_dots, dim=-1)
         
-        # Compute output
+        # Output
         out = torch.matmul(attn, v)
         out = out.transpose(1, 2).contiguous().view(b, seq_len, -1)
 
-        #skip connection
+        # Skip connection
         out = self.linear_out(out) + structure
             
         if attn_map_out:
