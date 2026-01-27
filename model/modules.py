@@ -125,7 +125,7 @@ class aa_seq2representation(nn.Module):
 # MultiHeadCrossAttention for integrating structure and sequene represetations #
 ################################################################################
 '''
-Constructing this module references the following paper:
+Constructing this module is based on the following paper:
 Takuto Koyama, et al., Chemical Genomics Language Model toward Reliable and Explainable Compound-Protein Interaction Exploration, bioRxiv, 2024.
 '''
 class MultiHeadCrossAttention(nn.Module):
@@ -193,7 +193,7 @@ class MultiHeadCrossAttention(nn.Module):
 # Template of MLP layer  #
 ##########################
 '''
-Constructing this module references the following paper:
+Constructing this module is based on the following paper:
 Takuto Koyama, et al., Chemical Genomics Language Model toward Reliable and Explainable Compound-Protein Interaction Exploration, bioRxiv, 2024.
 '''
 class MLP(nn.Module):
