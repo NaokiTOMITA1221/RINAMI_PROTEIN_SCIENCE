@@ -31,7 +31,9 @@ Creation of the environment:
 # Usage of RINAMI
 
     cd scripts
-    python run_inference.py [your_pdb_path]
+    python run_inference.py [your_pdb_path] 
+    
+    python run_inference.py [your_pdb_path] --save-residue-amino-acid-dG-heatmap #If you need residue-amino-acid-wise ΔG matrix
     
     
  # Preparation for training and testing RINAMI
