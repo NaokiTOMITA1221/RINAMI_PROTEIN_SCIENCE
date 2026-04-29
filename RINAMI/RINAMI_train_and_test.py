@@ -1,0 +1,650 @@
+import copy
+import json
+import math
+import os
+import sys
+import subprocess as sb
+
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import torch
+import tqdm
+from sklearn.metrics import average_precision_score, roc_auc_score
+from transformers import get_cosine_schedule_with_warmup
+
+from RINAMI_model_main_multitask import RINAMIInterpretableMultiTask
+from util import (
+    AA_ORDER_PLOT,
+    DEFAULT_ENSEMBLE_ROOT,
+    DEFAULT_ENSEMBLE_SPLITS,
+    ESM_SIZE,
+    TRAIN_SAMPLE_FRACTION,
+    _bootstrap_auc_ci,
+    _bootstrap_pr_auc_ci,
+    _bootstrap_regression_metrics,
+    _avg_ensemble_matrix_outputs,
+    _paired_bootstrap_auc_diff_ci,
+    _paired_bootstrap_pr_auc_diff_ci,
+    align_residue_info_to_sequence,
+    build_maxwell_dataset,
+    build_shared_ensemble_models,
+    composite_score,
+    device,
+    evaluate_foldability_ensemble_from_avg_matrix,
+    evaluate_maxwell_ensemble_from_avg_matrix,
+    evaluate_regression,
+    extract_residue_info_and_rsa,
+    iterate_batches,
+    load_garcia_benchmark_dataset,
+    load_mega_test,
+    load_mega_test_and_val_wt_only,
+    load_train_val,
+    make_optimizer,
+    resolve_ensemble_ckpts,
+    save_interpretability_heatmap,
+    train_one_epoch_classification,
+    train_one_epoch_regression,
+)
+
+def train_model(
+    model_save_path,
+    trained_model_param=None,
+    num_sets=20,
+    batch_size=256,
+    dropout=0.1,
+    ESM_size=ESM_SIZE,
+    split_num=1,
+    patience=8,
+):
+    reg_train, reg_val, cls_train = load_train_val(
+        split_num=split_num,
+        add_extremes_to_cls=True,
+    )
+
+    model = RINAMIInterpretableMultiTask(dropout=dropout, ESM_size=ESM_size).to(device)
+    if trained_model_param is not None:
+        state = torch.load(trained_model_param, map_location=device)
+        model.load_state_dict(state, strict=False)
+
+    optimizer = make_optimizer(model)
+
+    effective_cls_size = max(1, int(np.floor(len(cls_train["seqs"]) * TRAIN_SAMPLE_FRACTION)))
+    effective_reg_size = max(1, int(np.floor(len(reg_train["seqs"]) * TRAIN_SAMPLE_FRACTION)))
+
+    steps_per_cls_epoch = math.ceil(effective_cls_size / batch_size)
+    steps_per_reg_epoch = math.ceil(effective_reg_size / batch_size)
+    total_steps = num_sets * (steps_per_cls_epoch + 3 * steps_per_reg_epoch)
+
+    scheduler = get_cosine_schedule_with_warmup(
+        optimizer,
+        num_warmup_steps=max(1, int(0.05 * total_steps)),
+        num_training_steps=max(2, total_steps),
+    )
+
+    print(
+        f"[INFO] TRAIN_SAMPLE_FRACTION={TRAIN_SAMPLE_FRACTION:.3f} "
+        f"| cls_train_used_per_epoch≈{effective_cls_size}/{len(cls_train['seqs'])} "
+        f"| reg_train_used_per_epoch≈{effective_reg_size}/{len(reg_train['seqs'])}"
+    )
+
+    best_state = None
+    best_metrics = None
+    best_score = -1e18
+    best_tag = None
+    stale = 0
+
+    def evaluate_and_maybe_save(tag, train_loss, update_best_and_stale=False):
+        nonlocal best_state, best_metrics, best_score, best_tag, stale
+
+        metrics = evaluate_regression(model, reg_val, batch_size=max(32, batch_size // 2))
+        score = composite_score(metrics)
+
+        print(
+            f"[{tag}] "
+            f"TrainLoss: {train_loss:.6f} "
+            f"ValLoss: {metrics['val_loss']:.6f} "
+            f"Pearson: {metrics['pearson']:.4f} "
+            f"Spearman: {metrics['spearman']:.4f} "
+            f"RMSE: {metrics['rmse']:.4f} "
+            f"Composite: {score:.4f}"
+        )
+
+        epoch_ckpt_path = model_save_path.replace(".pth", f"_{tag}.pth")
+        torch.save(model.state_dict(), epoch_ckpt_path)
+
+        if update_best_and_stale:
+            if score > best_score:
+                best_score = score
+                best_metrics = metrics
+                best_state = copy.deepcopy(model.state_dict())
+                best_tag = tag
+                stale = 0
+                torch.save(best_state, model_save_path)
+                print(f"[BEST UPDATED] {tag}")
+            else:
+                stale += 1
+                print(f"[NO IMPROVEMENT] stale={stale}/{patience}")
+        else:
+            print("[INFO] classification epoch: best/stale unchanged")
+
+        return metrics, score
+
+    stop_training = False
+
+    for set_idx in range(num_sets):
+        cls_loss = train_one_epoch_classification(
+            model,
+            cls_train,
+            optimizer,
+            scheduler,
+            batch_size=batch_size,
+            epoch_label=f"set {set_idx+1} cls(1/1)",
+            sample_fraction=TRAIN_SAMPLE_FRACTION,
+        )
+        evaluate_and_maybe_save(
+            tag=f"set{set_idx+1}_cls",
+            train_loss=cls_loss,
+            update_best_and_stale=False,
+        )
+
+        for reg_epoch_idx in range(3):
+            reg_loss = train_one_epoch_regression(
+                model,
+                reg_train,
+                optimizer,
+                scheduler,
+                batch_size=batch_size,
+                epoch_label=f"set {set_idx+1} reg({reg_epoch_idx+1}/3)",
+                sample_fraction=TRAIN_SAMPLE_FRACTION,
+            )
+            evaluate_and_maybe_save(
+                tag=f"set{set_idx+1}_reg{reg_epoch_idx+1}",
+                train_loss=reg_loss,
+                update_best_and_stale=True,
+            )
+            if stale >= patience:
+                print(f"Early stopping after set {set_idx+1} reg epoch {reg_epoch_idx+1}.")
+                stop_training = True
+                break
+
+        if stop_training:
+            break
+
+    if best_state is not None:
+        model.load_state_dict(best_state)
+
+    print("Best validation metrics:")
+    print(json.dumps(
+        {
+            "best_tag": best_tag,
+            **{k: v for k, v in best_metrics.items() if k not in ["pred_dg", "true_dg"]},
+        },
+        indent=2
+    ))
+
+
+def test_model(trained_model_param, ESM_size=ESM_SIZE, batch_size=256, split_num=1):
+    test_data = load_mega_test(split_num=split_num)
+
+    model = RINAMIInterpretableMultiTask(dropout=0.1, ESM_size=ESM_size).to(device)
+    model.load_state_dict(torch.load(trained_model_param, map_location=device), strict=False)
+
+    metrics = evaluate_regression(model, test_data, batch_size=batch_size)
+    print("Mega test metrics:")
+    print(json.dumps(
+        {
+            "pearson": metrics["pearson"],
+            "spearman": metrics["spearman"],
+            "rmse": metrics["rmse"],
+            "mae": metrics["mae"],
+            "val_loss": metrics["val_loss"],
+        },
+        indent=2,
+    ))
+
+
+
+def export_residue_contributions(trained_model_param, output_dir, ESM_size=ESM_SIZE, split_num=1, batch_size=1):
+    os.makedirs(output_dir, exist_ok=True)
+    test_data = load_mega_test_and_val_wt_only(split_num=split_num)
+
+    model = RINAMIInterpretableMultiTask(dropout=0.1, ESM_size=ESM_size).to(device)
+    model.load_state_dict(torch.load(trained_model_param, map_location=device), strict=False)
+    model.eval()
+
+    with torch.no_grad():
+        for batch in tqdm.tqdm(
+            iterate_batches(test_data, batch_size=batch_size, shuffle=False, sample_fraction=1.0),
+            desc="export_wt_only"
+        ):
+            out = model(batch["seqs"], batch["structs"], batch["profiles"], return_details=True)
+
+            batch_indices = []
+            for name in batch["names"]:
+                idx = test_data["names"].index(name)
+                batch_indices.append(idx)
+
+            batch_pdbs = [test_data["pdbs"][i] for i in batch_indices]
+
+            for i, (name, seq, pdb_path) in enumerate(zip(batch["names"], batch["seqs"], batch_pdbs)):
+                residue_amino_acid_wise_dG_mat = np.square(
+                    out["residue_amino_acid_wise_dG_mat"][i].detach().cpu().numpy()
+                )
+                valid_len = len(seq)
+
+                residue_infos_raw = extract_residue_info_and_rsa(pdb_path)
+                residue_infos = align_residue_info_to_sequence(seq, residue_infos_raw, pdb_path)
+
+                png_path = os.path.join(output_dir, f"{name}_interpretability_heatmap.png")
+                buried_mask, rsa_array, residue_numbers = save_interpretability_heatmap(
+                    residue_amino_acid_wise_dG_mat=residue_amino_acid_wise_dG_mat,
+                    valid_len=valid_len,
+                    seq=seq,
+                    residue_infos=residue_infos,
+                    png_path=png_path,
+                    vmin=-.75,
+                    vmax=.75,
+                )
+                xticklabels = np.array(
+                    [f"{residue_numbers[j]}{seq[j]}" for j in range(valid_len)],
+                    dtype=object,
+                )
+                aa_labels_plot_order = np.array(list(AA_ORDER_PLOT), dtype=object)
+
+                record = {
+                    "residue_amino_acid_wise_dG_mat": residue_amino_acid_wise_dG_mat,
+                    "pred_dG": float(out["dG"][i].item()),
+                    "pred_foldability_prob": float(torch.sigmoid(out["foldability_logit"][i]).item()),
+                    "rsa": rsa_array,
+                    "buried_mask": buried_mask,
+                    "residue_numbers": residue_numbers,
+                    "xticklabels": xticklabels,
+                    "aa_order_for_plot": aa_labels_plot_order,
+                    "pdb_path": np.array(pdb_path, dtype=object),
+                    "sequence": np.array(seq, dtype=object),
+                }
+
+                np.savez_compressed(
+                    os.path.join(output_dir, f"{name}_interpretability.npz"),
+                    **record
+                )
+
+# ============================================================
+# Garcia benchmark and Maxwell ensemble tests
+# ============================================================
+def test_model_with_maxwell_ensemble(
+    ensemble_root=DEFAULT_ENSEMBLE_ROOT,
+    ESM_size=ESM_SIZE,
+    batch_size=256,
+):
+    dataset = build_maxwell_dataset()
+    ckpt_paths = resolve_ensemble_ckpts(ensemble_root=ensemble_root, splits=DEFAULT_ENSEMBLE_SPLITS)
+    ensemble_models = build_shared_ensemble_models(ckpt_paths, ESM_size=ESM_size, dropout=0.1)
+
+    print("[INFO] Maxwell ensemble evaluation uses averaged residue_amino_acid_wise_dG_mat over 5 heads")
+    print("[INFO] foldability_logit is recomputed from the averaged matrix-derived dG")
+
+    metrics = evaluate_maxwell_ensemble_from_avg_matrix(
+        ensemble_models,
+        dataset,
+        batch_size=batch_size,
+        print_predictions=True,
+        show_progress=True,
+        progress_desc="Maxwell ensemble",
+    )
+
+    bootstrap_summary = _bootstrap_regression_metrics(
+        pred_dg=metrics["pred_dg"],
+        true_dg=metrics["true_dg"],
+        B=10000,
+        seed=1234,
+        alpha=0.05,
+    )
+
+    print("\nMaxwell ensemble metrics:")
+
+    print(json.dumps(
+        {
+            "ensemble_ckpts": ckpt_paths,
+            "pearson": metrics["pearson"],
+            "spearman": metrics["spearman"],
+            "rmse": metrics["rmse"],
+            "mae": metrics["mae"],
+            "val_loss": metrics["val_loss"],
+            "mean_pred_foldability_logit": float(np.mean(metrics["pred_foldability_logit"])),
+            "mean_pred_foldability_prob": float(np.mean(metrics["pred_foldability_prob"])),
+            "bootstrap": bootstrap_summary,
+        },
+        indent=2,
+    ))
+    print(f"\nCorrelation of Maxwell ensemble test: {metrics['pearson']}")
+
+def test_model_with_garcia_benchmark_set_ensemble(
+    ensemble_root=DEFAULT_ENSEMBLE_ROOT,
+    ESM_size=ESM_SIZE,
+    batch_size=1,
+    threshold=0.5,
+    seq_len_threshold=300,
+    print_predictions=False,
+):
+    dataset = load_garcia_benchmark_dataset(seq_len_threshold=seq_len_threshold)
+    ckpt_paths = resolve_ensemble_ckpts(
+        ensemble_root=ensemble_root,
+        splits=DEFAULT_ENSEMBLE_SPLITS,
+    )
+    ensemble_models = build_shared_ensemble_models(
+        ckpt_paths,
+        ESM_size=ESM_size,
+        dropout=0.1,
+    )
+
+    metrics = evaluate_foldability_ensemble_from_avg_matrix(
+        ensemble_models,
+        dataset,
+        batch_size=batch_size,
+        threshold=threshold,
+        print_predictions=print_predictions,
+        show_progress=True,
+        progress_desc=f"Garcia ensemble (len<={seq_len_threshold})",
+    )
+
+    af_probs = np.array(dataset["af_plddt"], dtype=float)
+    esmfold_probs = np.array(dataset["esmfold_plddt"], dtype=float)
+    ref_labels = np.array(dataset["af_label"], dtype=int)
+
+    auc_roc_AF_pLDDT_3rec = float(roc_auc_score(ref_labels, af_probs))
+    auc_roc_ESMFold_pLDDT = float(roc_auc_score(ref_labels, esmfold_probs))
+
+    auc_pr_AF_pLDDT_3rec = float(average_precision_score(ref_labels, af_probs))
+    auc_pr_ESMFold_pLDDT = float(average_precision_score(ref_labels, esmfold_probs))
+
+    print(f"True Foldable: {metrics['true_pos_count']}, True Not Foldable: {metrics['true_neg_count']}")
+    print(
+        f"ROC-AUC(foldable=1): {metrics['auc_roc']:.4f} | "
+        f"PR-AUC(foldable=1): {metrics['auc_pr']:.4f} | "
+        f"Accuracy: {metrics['acc']:.4f} | "
+        f"AF2 pLDDT ROC-AUC: {auc_roc_AF_pLDDT_3rec:.4f} | "
+        f"AF2 pLDDT PR-AUC: {auc_pr_AF_pLDDT_3rec:.4f} | "
+        f"ESMFold pLDDT ROC-AUC: {auc_roc_ESMFold_pLDDT:.4f} | "
+        f"ESMFold pLDDT PR-AUC: {auc_pr_ESMFold_pLDDT:.4f}"
+    )
+
+    return (
+        metrics["p_f_probs"],
+        dataset["af_plddt"],
+        dataset["esmfold_plddt"],
+        dataset["af_label"],
+        metrics["auc_roc"],
+        metrics["auc_pr"],
+        auc_roc_AF_pLDDT_3rec,
+        auc_pr_AF_pLDDT_3rec,
+        auc_roc_ESMFold_pLDDT,
+        auc_pr_ESMFold_pLDDT,
+        metrics["true_pos_count"],
+        metrics["true_neg_count"],
+    )
+
+
+def run_garcia_benchmark_ensemble(
+    ensemble_root=DEFAULT_ENSEMBLE_ROOT,
+    ESM_size=ESM_SIZE,
+):
+    print("Test mode: Garcia_benchmark_ensemble_test")
+
+    seq_len_threshold_list = [80, 130, 180, 230]
+
+    ROC_AUC_list = []
+    ROC_AUC_AF2_list = []
+    ROC_AUC_ESMFold_list = []
+
+    PR_AUC_list = []
+    PR_AUC_AF2_list = []
+    PR_AUC_ESMFold_list = []
+
+    true_pos_num_list = []
+    true_neg_num_list = []
+
+    for seq_len_threshold in seq_len_threshold_list:
+        print(
+            "***************************************************************************************************************************************************************************************************************************************"
+        )
+        print(f"seq_len_threshold = {seq_len_threshold}")
+
+        (
+            foldability_prob_RINAMI,
+            AF2_plddt,
+            ESMFold_plddt,
+            exp_foldability,
+            roc_auc,
+            pr_auc,
+            auc_roc_AF_pLDDT_3rec,
+            auc_pr_AF_pLDDT_3rec,
+            auc_roc_ESMFold_pLDDT,
+            auc_pr_ESMFold_pLDDT,
+            tpc,
+            tnc,
+        ) = test_model_with_garcia_benchmark_set_ensemble(
+            ensemble_root=ensemble_root,
+            ESM_size=ESM_size,
+            seq_len_threshold=seq_len_threshold,
+            batch_size=1,
+            print_predictions=False,
+        )
+
+        B = 10000
+        seed_base = 1234 + int(seq_len_threshold)
+
+        # ROC-AUC bootstrap
+        auc_r_hat, (auc_r_lo, auc_r_hi), _, p_r_le_0p5 = _bootstrap_auc_ci(
+            exp_foldability, foldability_prob_RINAMI, B=B, seed=seed_base
+        )
+        auc_a_hat, (auc_a_lo, auc_a_hi), _, p_a_le_0p5 = _bootstrap_auc_ci(
+            exp_foldability, AF2_plddt, B=B, seed=seed_base + 1
+        )
+        auc_e_hat, (auc_e_lo, auc_e_hi), _, p_e_le_0p5 = _bootstrap_auc_ci(
+            exp_foldability, ESMFold_plddt, B=B, seed=seed_base + 2
+        )
+
+        diff_hat_ra, (diff_lo_ra, diff_hi_ra), _, p_diff_ra_le_0 = _paired_bootstrap_auc_diff_ci(
+            exp_foldability, foldability_prob_RINAMI, AF2_plddt, B=B, seed=seed_base + 3
+        )
+        diff_hat_re, (diff_lo_re, diff_hi_re), _, p_diff_re_le_0 = _paired_bootstrap_auc_diff_ci(
+            exp_foldability, foldability_prob_RINAMI, ESMFold_plddt, B=B, seed=seed_base + 4
+        )
+
+        # PR-AUC bootstrap
+        pr_r_hat, (pr_r_lo, pr_r_hi), _, p_pr_r_le_base = _bootstrap_pr_auc_ci(
+            exp_foldability, foldability_prob_RINAMI, B=B, seed=seed_base + 10
+        )
+        pr_a_hat, (pr_a_lo, pr_a_hi), _, p_pr_a_le_base = _bootstrap_pr_auc_ci(
+            exp_foldability, AF2_plddt, B=B, seed=seed_base + 11
+        )
+        pr_e_hat, (pr_e_lo, pr_e_hi), _, p_pr_e_le_base = _bootstrap_pr_auc_ci(
+            exp_foldability, ESMFold_plddt, B=B, seed=seed_base + 12
+        )
+
+        diff_hat_pr_ra, (diff_lo_pr_ra, diff_hi_pr_ra), _, p_diff_pr_ra_le_0 = _paired_bootstrap_pr_auc_diff_ci(
+            exp_foldability, foldability_prob_RINAMI, AF2_plddt, B=B, seed=seed_base + 13
+        )
+        diff_hat_pr_re, (diff_lo_pr_re, diff_hi_pr_re), _, p_diff_pr_re_le_0 = _paired_bootstrap_pr_auc_diff_ci(
+            exp_foldability, foldability_prob_RINAMI, ESMFold_plddt, B=B, seed=seed_base + 14
+        )
+
+        print(
+            f"[BOOT][ROC] RINAMI   AUC={auc_r_hat:.4f} 95%CI[{auc_r_lo:.4f},{auc_r_hi:.4f}] P(AUC<=0.5)={p_r_le_0p5:.4g}\n",
+            f"[BOOT][ROC] AF2      AUC={auc_a_hat:.4f} 95%CI[{auc_a_lo:.4f},{auc_a_hi:.4f}] P(AUC<=0.5)={p_a_le_0p5:.4g}\n",
+            f"[BOOT][ROC] ESMFold  AUC={auc_e_hat:.4f} 95%CI[{auc_e_lo:.4f},{auc_e_hi:.4f}] P(AUC<=0.5)={p_e_le_0p5:.4g}\n",
+            f"[BOOT][ROC] ΔAUC (RINAMI-AF2)     ={diff_hat_ra:.4f} 95%CI[{diff_lo_ra:.4f},{diff_hi_ra:.4f}] P(Δ<=0)={p_diff_ra_le_0:.4g}\n",
+            f"[BOOT][ROC] ΔAUC (RINAMI-ESMFold) ={diff_hat_re:.4f} 95%CI[{diff_lo_re:.4f},{diff_hi_re:.4f}] P(Δ<=0)={p_diff_re_le_0:.4g}\n",
+            f"[BOOT][PR ] RINAMI   AUC={pr_r_hat:.4f} 95%CI[{pr_r_lo:.4f},{pr_r_hi:.4f}] P(AUC<=baseline)={p_pr_r_le_base:.4g}\n",
+            f"[BOOT][PR ] AF2      AUC={pr_a_hat:.4f} 95%CI[{pr_a_lo:.4f},{pr_a_hi:.4f}] P(AUC<=baseline)={p_pr_a_le_base:.4g}\n",
+            f"[BOOT][PR ] ESMFold  AUC={pr_e_hat:.4f} 95%CI[{pr_e_lo:.4f},{pr_e_hi:.4f}] P(AUC<=baseline)={p_pr_e_le_base:.4g}\n",
+            f"[BOOT][PR ] ΔAUC (RINAMI-AF2)     ={diff_hat_pr_ra:.4f} 95%CI[{diff_lo_pr_ra:.4f},{diff_hi_pr_ra:.4f}] P(Δ<=0)={p_diff_pr_ra_le_0:.4g}\n",
+            f"[BOOT][PR ] ΔAUC (RINAMI-ESMFold) ={diff_hat_pr_re:.4f} 95%CI[{diff_lo_pr_re:.4f},{diff_hi_pr_re:.4f}] P(Δ<=0)={p_diff_pr_re_le_0:.4g}\n"
+        )
+
+        ROC_AUC_list.append(roc_auc)
+        ROC_AUC_AF2_list.append(auc_roc_AF_pLDDT_3rec)
+        ROC_AUC_ESMFold_list.append(auc_roc_ESMFold_pLDDT)
+
+        PR_AUC_list.append(pr_auc)
+        PR_AUC_AF2_list.append(auc_pr_AF_pLDDT_3rec)
+        PR_AUC_ESMFold_list.append(auc_pr_ESMFold_pLDDT)
+
+        true_pos_num_list.append(tpc)
+        true_neg_num_list.append(tnc)
+
+    xtick_labels = [f"{seq_len_threshold} ({tpc} : {tnc})" for seq_len_threshold, tpc, tnc in zip(seq_len_threshold_list, true_pos_num_list, true_neg_num_list)]
+
+    fig, axes = plt.subplots(2, 1, figsize=(8, 9), sharex=True)
+
+    # ROC-AUC
+    axes[0].set_ylim(0.5, 1.0)
+    axes[0].plot(seq_len_threshold_list, ROC_AUC_list, c="#f6adc6", linestyle="-", marker="o")
+    axes[0].plot(seq_len_threshold_list, ROC_AUC_AF2_list, c="gray", linestyle="--", marker="o", alpha=0.8)
+    axes[0].plot(seq_len_threshold_list, ROC_AUC_ESMFold_list, c="#6aaed6", linestyle=":", marker="o", alpha=0.9)
+    axes[0].legend(["RINAMI", "AlphaFold pLDDT", "ESMFold pLDDT"])
+    axes[0].set_ylabel("ROC-AUC", fontsize=12, fontweight="bold")
+
+    # PR-AUC
+    axes[1].set_ylim(0.5, 1.0)
+    axes[1].plot(seq_len_threshold_list, PR_AUC_list, c="#f6adc6", linestyle="-", marker="o")
+    axes[1].plot(seq_len_threshold_list, PR_AUC_AF2_list, c="gray", linestyle="--", marker="o", alpha=0.8)
+    axes[1].plot(seq_len_threshold_list, PR_AUC_ESMFold_list, c="#6aaed6", linestyle=":", marker="o", alpha=0.9)
+    axes[1].legend(["RINAMI", "AlphaFold pLDDT", "ESMFold pLDDT"])
+    axes[1].set_ylabel("PR-AUC", fontsize=12, fontweight="bold")
+    axes[1].set_xlabel("Sequence length threshold(Foldable : Not Foldable)", fontsize=12, fontweight="bold")
+    axes[1].set_xticks(seq_len_threshold_list)
+    axes[1].set_xticklabels(xtick_labels)
+
+    for ax in axes:
+        sns.despine(ax=ax)
+    
+    sb.call('mkdir -p ./Figures/', shell=True)
+    plt.tight_layout()
+    plt.savefig("./Figures/Trained_model_Garcia_benchmark_ensemble_result_ROC_PR_AUC.png", bbox_inches="tight", dpi=300)
+    plt.savefig("./Figures/Trained_model_Garcia_benchmark_ensemble_result_ROC_PR_AUC.pdf", bbox_inches="tight", dpi=300)
+    plt.close()
+
+# ============================================================
+# CLI
+# ============================================================
+if __name__ == "__main__":
+    args = sys.argv
+
+    # Train from scratch
+    if len(args) == 3:
+        model_save_path = args[1]
+        split_num = int(args[2])
+        print("Training mode: from scratch")
+        train_model(model_save_path, trained_model_param=None, split_num=split_num)
+
+
+    # Finetune        
+    elif len(args) == 4 and args[2] not in [
+        "Mega_test",
+        "Maxwell_test_ensemble",
+        "Garcia_test_ensemble",
+        "export_interpretability",
+    ]:
+        model_save_path = args[1]
+        trained_model_param = args[2]
+        split_num = int(args[3])
+        print("Training mode: finetune")
+        train_model(model_save_path, trained_model_param=trained_model_param, split_num=split_num)
+
+    # Dedicated short modes
+    elif len(args) == 2 and args[1] == "Maxwell_test_ensemble":
+        print("Mode: Maxwell_test_ensemble")
+        test_model_with_maxwell_ensemble()
+
+    elif len(args) == 2 and args[1] == "Garcia_test_ensemble":
+        print("Mode: Garcia_test_ensemble")
+        run_garcia_benchmark_ensemble()
+
+    # Legacy five-argument style
+    elif len(args) == 5:
+        trained_model_path = args[1]
+        mode = args[2]
+        split_num = int(args[3])
+        out_dir = args[4]
+        _ = trained_model_path, split_num, out_dir
+
+        if mode == "export_interpretability":
+            print("Mode: export_interpretability")
+            export_residue_contributions(trained_model_path, out_dir, split_num=split_num)
+        elif mode == "Mega_test":
+            print("Mode: Mega_test")
+            test_model(trained_model_path, split_num=split_num)
+        elif mode == "Maxwell_test_ensemble":
+            print("Mode: Maxwell_test_ensemble")
+            test_model_with_maxwell_ensemble()
+        elif mode == "Garcia_test_ensemble":
+            print("Mode: Garcia_test_ensemble")
+            run_garcia_benchmark_ensemble()
+        else:
+            raise ValueError(f"Unknown mode: {mode}")
+
+
+    # Legacy six-argument style with ensemble_root
+    elif len(args) == 6:
+        trained_model_path = args[1]
+        mode = args[2]
+        split_num = int(args[3])
+        out_dir = args[4]
+        ensemble_root = args[5]
+        _ = trained_model_path, split_num, out_dir
+
+        if mode == "Maxwell_test_ensemble":
+            print("Mode: Maxwell_test_ensemble")
+            test_model_with_maxwell_ensemble(ensemble_root=ensemble_root)
+        elif mode == "Garcia_test_ensemble":
+            print("Mode: Garcia_test_ensemble")
+            run_garcia_benchmark_ensemble(ensemble_root=ensemble_root)
+        else:
+            raise ValueError(f"Unknown 6-arg mode: {mode}")
+
+    else:
+        print(
+            "Usage:\n"
+            "  train from scratch:\n"
+            "    python3 RINAMI_multitask_train_and_test.py <save_path> <split_num>\n"
+            "\n"
+            "  finetune:\n"
+            "    python3 RINAMI_multitask_train_and_test.py <save_path> <init_ckpt> <split_num>\n"
+            "\n"
+            "  Mega test:\n"
+            "    python3 RINAMI_multitask_train_and_test.py <ckpt> Mega_test <split_num> <dummy_outdir>\n"
+            "\n"
+
+            "  export:\n"
+            "    python3 RINAMI_multitask_train_and_test.py <ckpt> export_interpretability <split_num> <out_dir>\n"
+            "\n"
+            "  Maxwell ensemble test (short):\n"
+            "    python3 RINAMI_multitask_train_and_test.py Maxwell_test_ensemble\n"
+            "\n"
+            "  Garcia ensemble test (short):\n"
+            "    python3 RINAMI_multitask_train_and_test.py Garcia_test_ensemble\n"
+            "\n"
+            "  Maxwell ensemble test (legacy style):\n"
+            "    python3 RINAMI_multitask_train_and_test.py dummy.pth Maxwell_test_ensemble 1 dummy_out\n"
+            "\n"
+            "  Garcia ensemble test (legacy style):\n"
+            "    python3 RINAMI_multitask_train_and_test.py dummy.pth Garcia_test_ensemble 1 dummy_out\n"
+            "\n"
+            "  Maxwell ensemble test with custom root:\n"
+            "    python3 RINAMI_multitask_train_and_test.py dummy.pth Maxwell_test_ensemble 1 dummy_out <ensemble_root>\n"
+            "\n"
+            "  Garcia ensemble test with custom root:\n"
+            "    python3 RINAMI_multitask_train_and_test.py dummy.pth Garcia_test_ensemble 1 dummy_out <ensemble_root>\n"
+
+
+            )
+
+
+
+
