@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 
-import layers
+import modules
 from util import aa_sequences_to_padded_onehot, pad_feature_matrices
 
 
