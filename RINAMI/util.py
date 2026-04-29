@@ -106,6 +106,7 @@ ESM_SIZE = 320
 # Ensemble settings
 # ============================================================
 DEFAULT_ENSEMBLE_ROOT = "../pth/lowest_performing_models"
+DEFAULT_ENSEMBLE_ROOT_TRAINED_BY_USER = "../pth/pth_RINAMI_trained"
 DEFAULT_ENSEMBLE_SPLITS = (1, 2, 3)
 
 

@@ -47,7 +47,7 @@ When you try the training and test of RINAMI by yourself, structures of proteins
     processed_data/Maxwell_predicted_structure_pdb 
     processed_data/Garcia_benchmark_predicted_structure_pdb
 
-respectively. Structural prediction typically takes about one day with ESMFold.
+respectively. Structural prediction typically takes about four day with ESMFold.
 
 After the structural prediction, please generate ProteinMPNN node representation and ProteinMPNN output profile from the predicted structure and save them into properly made directories, following the process below.
     
@@ -61,12 +61,14 @@ After the structural prediction, please generate ProteinMPNN node representation
     
 # Training of RINAMI
 
-    cd model
+    cd RINAMI
     bash train_RINAMI.sh 
 
 # Test of RINAMI
 
-    cd model
-    python RINAMI_regression_train_and_test.py test_mode [model param path] [test set: "Mega_test", "Maxwell_test", "res_AA_wise_dG_mat"] #Regression task
-    python RINAMI_foldability_prediction_train_and_test.py test_mode [model param path] #Foldability prediciton task
+    cd RINAMI
+    python3 RINAMI_train_and_test.py [model param path] Mega_test [split num] [dummy_outdir path] #Mega-scale test
+    python3 RINAMI_train_and_test.py [model param path] export_interpretability [split num] [out_dir path] #Extracting residue-amino-acid-wise ΔG matrix of wild-type proteins in Mega-scale validation and test subdatasets
+    python3 RINAMI_train_and_test.py Maxwell_test USER_TRAINED #Maxwell benchmark test
+    python3 RINAMI_train_and_test.py Garcia_test USER_TRAINED #Garcia benchmark test
     

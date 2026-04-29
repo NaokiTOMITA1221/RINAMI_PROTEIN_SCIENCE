@@ -20,6 +20,7 @@ from RINAMI_model_main_multitask import RINAMIInterpretableMultiTask
 from util import (
     AA_ORDER_PLOT,
     DEFAULT_ENSEMBLE_ROOT,
+    DEFAULT_ENSEMBLE_ROOT_TRAINED_BY_USER,
     DEFAULT_ENSEMBLE_SPLITS,
     ESM_SIZE,
     TRAIN_SAMPLE_FRACTION,
@@ -547,8 +548,8 @@ if __name__ == "__main__":
     # Finetune        
     elif len(args) == 4 and args[2] not in [
         "Mega_test",
-        "Maxwell_test_ensemble",
-        "Garcia_test_ensemble",
+        "Maxwell_test",
+        "Garcia_test",
         "export_interpretability",
     ]:
         model_save_path = args[1]
@@ -557,56 +558,26 @@ if __name__ == "__main__":
         print("Training mode: finetune")
         train_model(model_save_path, trained_model_param=trained_model_param, split_num=split_num)
 
-    # Dedicated short modes
-    elif len(args) == 2 and args[1] == "Maxwell_test_ensemble":
-        print("Mode: Maxwell_test_ensemble")
+
+    elif len(args) == 2 and args[1] == "Maxwell_test":
+        print("Mode: Maxwell_test")
         test_model_with_maxwell_ensemble()
 
-    elif len(args) == 2 and args[1] == "Garcia_test_ensemble":
-        print("Mode: Garcia_test_ensemble")
+    elif len(args) == 2 and args[1] == "Garcia_test":
+        print("Mode: Garcia_test")
         run_garcia_benchmark_ensemble()
 
-    # Legacy five-argument style
-    elif len(args) == 5:
-        trained_model_path = args[1]
-        mode = args[2]
-        split_num = int(args[3])
-        out_dir = args[4]
-        _ = trained_model_path, split_num, out_dir
+    elif len(args) == 3 and args[1] == "Maxwell_test":
+        print("Mode: Maxwell_test")
+        test_model_with_maxwell_ensemble(ensemble_root=DEFAULT_ENSEMBLE_ROOT_TRAINED_BY_USER)
 
-        if mode == "export_interpretability":
-            print("Mode: export_interpretability")
-            export_residue_contributions(trained_model_path, out_dir, split_num=split_num)
-        elif mode == "Mega_test":
-            print("Mode: Mega_test")
-            test_model(trained_model_path, split_num=split_num)
-        elif mode == "Maxwell_test_ensemble":
-            print("Mode: Maxwell_test_ensemble")
-            test_model_with_maxwell_ensemble()
-        elif mode == "Garcia_test_ensemble":
-            print("Mode: Garcia_test_ensemble")
-            run_garcia_benchmark_ensemble()
-        else:
-            raise ValueError(f"Unknown mode: {mode}")
+    elif len(args) == 3 and args[1] == "Garcia_test":
+        print("Mode: Garcia_test")
+        run_garcia_benchmark_ensemble(ensemble_root=DEFAULT_ENSEMBLE_ROOT_TRAINED_BY_USER)
 
 
-    # Legacy six-argument style with ensemble_root
-    elif len(args) == 6:
-        trained_model_path = args[1]
-        mode = args[2]
-        split_num = int(args[3])
-        out_dir = args[4]
-        ensemble_root = args[5]
-        _ = trained_model_path, split_num, out_dir
 
-        if mode == "Maxwell_test_ensemble":
-            print("Mode: Maxwell_test_ensemble")
-            test_model_with_maxwell_ensemble(ensemble_root=ensemble_root)
-        elif mode == "Garcia_test_ensemble":
-            print("Mode: Garcia_test_ensemble")
-            run_garcia_benchmark_ensemble(ensemble_root=ensemble_root)
-        else:
-            raise ValueError(f"Unknown 6-arg mode: {mode}")
+
 
     else:
         print(
@@ -620,28 +591,20 @@ if __name__ == "__main__":
             "  Mega test:\n"
             "    python3 RINAMI_multitask_train_and_test.py <ckpt> Mega_test <split_num> <dummy_outdir>\n"
             "\n"
-
             "  export:\n"
             "    python3 RINAMI_multitask_train_and_test.py <ckpt> export_interpretability <split_num> <out_dir>\n"
             "\n"
             "  Maxwell ensemble test (short):\n"
-            "    python3 RINAMI_multitask_train_and_test.py Maxwell_test_ensemble\n"
+            "    python3 RINAMI_multitask_train_and_test.py Maxwell_test\n"
             "\n"
             "  Garcia ensemble test (short):\n"
-            "    python3 RINAMI_multitask_train_and_test.py Garcia_test_ensemble\n"
+            "    python3 RINAMI_multitask_train_and_test.py Garcia_test\n"
             "\n"
             "  Maxwell ensemble test (legacy style):\n"
-            "    python3 RINAMI_multitask_train_and_test.py dummy.pth Maxwell_test_ensemble 1 dummy_out\n"
+            "    python3 RINAMI_multitask_train_and_test.py Maxwell_test USER_TRAINED\n"
             "\n"
             "  Garcia ensemble test (legacy style):\n"
-            "    python3 RINAMI_multitask_train_and_test.py dummy.pth Garcia_test_ensemble 1 dummy_out\n"
-            "\n"
-            "  Maxwell ensemble test with custom root:\n"
-            "    python3 RINAMI_multitask_train_and_test.py dummy.pth Maxwell_test_ensemble 1 dummy_out <ensemble_root>\n"
-            "\n"
-            "  Garcia ensemble test with custom root:\n"
-            "    python3 RINAMI_multitask_train_and_test.py dummy.pth Garcia_test_ensemble 1 dummy_out <ensemble_root>\n"
-
+            "    python3 RINAMI_multitask_train_and_test.py Garcia_test USER_TRAINED\n"
 
             )
 
