@@ -31,22 +31,22 @@ class RINAMIInterpretableMultiTask(nn.Module):
         self.aa_rep_dim = ESM_size
 
         # Load ESM.
-        self.aa_seq_encoder = layers.aa_seq2representation(model_size=self.aa_rep_dim)
+        self.aa_seq_encoder = modules.aa_seq2representation(model_size=self.aa_rep_dim)
         self.aa_seq_encoder.eval()
         for p in self.aa_seq_encoder.parameters():
             p.requires_grad = False
 
         # Positional encoding.
-        self.pos_enc = layers.PositionalEncoding(self.pe_dim)
+        self.pos_enc = modules.PositionalEncoding(self.pe_dim)
         
         # Positional encoding converters.
-        self.MLP_pe_node_rep = layers.MLP(self.pe_dim, self.mid_dim)
-        self.MLP_pe_aa_seq = layers.MLP(self.pe_dim, self.mid_dim)          
-        self.MLP_pe_interact_1 = layers.MLP(self.pe_dim, self.mid_dim)
-        self.MLP_pe_interact_2 = layers.MLP(self.pe_dim, self.mid_dim)
-        self.MLP_pe_interact_3 = layers.MLP(self.pe_dim, self.mid_dim)
-        self.MLP_pe_interact_4 = layers.MLP(self.pe_dim, self.mid_dim)
-        self.MLP_pe_residue_amino_acid_wise_dG_mat = layers.MLP(self.pe_dim, self.mid_dim)
+        self.MLP_pe_node_rep = modules.MLP(self.pe_dim, self.mid_dim)
+        self.MLP_pe_aa_seq = modules.MLP(self.pe_dim, self.mid_dim)          
+        self.MLP_pe_interact_1 = modules.MLP(self.pe_dim, self.mid_dim)
+        self.MLP_pe_interact_2 = modules.MLP(self.pe_dim, self.mid_dim)
+        self.MLP_pe_interact_3 = modules.MLP(self.pe_dim, self.mid_dim)
+        self.MLP_pe_interact_4 = modules.MLP(self.pe_dim, self.mid_dim)
+        self.MLP_pe_residue_amino_acid_wise_dG_mat = modules.MLP(self.pe_dim, self.mid_dim)
         
         # Layer normalization.
         self.layer_norm_aa_seq_rep    = nn.LayerNorm(self.aa_rep_dim)
@@ -58,20 +58,20 @@ class RINAMIInterpretableMultiTask(nn.Module):
         self.layer_norm_residue_amino_acid_wise_dG_mat    = nn.LayerNorm(self.mid_dim)
         
         # Projections.
-        self.ProteinMPNN_rep_refine = layers.MLP(self.in_dim + self.profile_dim, self.mid_dim)
-        self.ESM_rep_refine = layers.MLP(self.aa_rep_dim, self.mid_dim)
+        self.ProteinMPNN_rep_refine = modules.MLP(self.in_dim + self.profile_dim, self.mid_dim)
+        self.ESM_rep_refine = modules.MLP(self.aa_rep_dim, self.mid_dim)
         
         # Multi-head cross-attention.
-        self.CA_reweight_node_rep = layers.MultiHeadCrossAttention(
+        self.CA_reweight_node_rep = modules.MultiHeadCrossAttention(
             self.mid_dim, self.mid_dim, heads=12, dim_head=128
         )
 
         # Interaction representation to residue-amino-acid-wise dG matrix.
-        self.interaction_proj_1 = layers.MLP(self.mid_dim, self.mid_dim )
-        self.interaction_proj_2 = layers.MLP(self.mid_dim, self.mid_dim )
-        self.interaction_proj_3 = layers.MLP(self.mid_dim, self.mid_dim ) 
-        self.interaction_proj_4 = layers.MLP(self.mid_dim, self.mid_dim )
-        self.aa_res_head = layers.MLP(self.mid_dim, 20)
+        self.interaction_proj_1 = modules.MLP(self.mid_dim, self.mid_dim )
+        self.interaction_proj_2 = modules.MLP(self.mid_dim, self.mid_dim )
+        self.interaction_proj_3 = modules.MLP(self.mid_dim, self.mid_dim ) 
+        self.interaction_proj_4 = modules.MLP(self.mid_dim, self.mid_dim )
+        self.aa_res_head = modules.MLP(self.mid_dim, 20)
         
         # Lambda value mentioned in Figure S6.
         self.register_buffer("alpha_in_sigmoid", torch.tensor(10.0))
@@ -133,7 +133,7 @@ class RINAMIInterpretableMultiTask(nn.Module):
             profiles,
         ) = self._load_inputs(seq_list, feat_path_list, profile_path_list)
 
-        pe, _ = layers.create_padded_positional_encodings(self.pos_enc, seq_lengths)
+        pe, _ = modules.create_padded_positional_encodings(self.pos_enc, seq_lengths)
         pe = pe.to(self.device)
 
         B, L_max = aa_seq_reps.shape[0], aa_seq_reps.shape[1]
