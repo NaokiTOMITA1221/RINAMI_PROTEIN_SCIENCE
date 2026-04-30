@@ -9,6 +9,10 @@ published RINAMI repository and executed as:
 It generates the temporary ProteinMPNN node representations and output
 profiles for the input PDB, runs three lowest-performing-model checkpoints,
 and reports the ensemble-averaged prediction.
+
+Optionally, it can also save:
+  - the ensemble-averaged residue-amino-acid-wise dG matrix as .npz
+  - a heatmap image (.png) of the ensemble-averaged residue-amino-acid-wise dG matrix
 """
 
 import argparse
@@ -18,6 +22,9 @@ import sys
 from pathlib import Path
 from typing import Iterable, List, Tuple
 
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
@@ -29,6 +36,9 @@ PROCESSED_DATA_DIR = ROOT / "processed_data"
 DEFAULT_LPM_ROOT = ROOT / "pth" / "lowest_performing_models"
 DEFAULT_LPM_SPLITS = (1, 2, 3)
 
+AA_ORDER_CANONICAL = "ACDEFGHIKLMNPQRSTVWY"
+AA_ORDER_HEATMAP = "QENHDRKTSAGMCLVIWYFP"
+
 # Make imports work when this script is executed from either `scripts/` or the
 # repository root.
 sys.path.insert(0, str(RINAMI_DIR))
@@ -37,7 +47,6 @@ sys.path.insert(0, str(SCRIPT_DIR))
 try:
     from RINAMI_model_main_multitask import RINAMIInterpretableMultiTask
 except ImportError:
-    # Public releases may use a shorter filename.
     from RINAMI_model_main import RINAMIInterpretableMultiTask
 
 from util import get_sequence_from_single_chain_pdb
@@ -78,6 +87,34 @@ def parse_args() -> argparse.Namespace:
         help="ESM representation size used by the trained model.",
     )
     parser.add_argument(
+        "--save-residue-amino-acid-dG-matrix",
+        action="store_true",
+        help="Save the ensemble-averaged residue-amino-acid-wise dG matrix as a compressed .npz file.",
+    )
+    parser.add_argument(
+        "--matrix-out-dir",
+        type=Path,
+        default=None,
+        help="Output directory for the .npz matrix. Default: ./rinami_matrix_outputs",
+    )
+    parser.add_argument(
+        "--save-residue-amino-acid-dG-heatmap",
+        action="store_true",
+        help="Save the ensemble-averaged residue-amino-acid-wise dG matrix as a heatmap image (.png).",
+    )
+    parser.add_argument(
+        "--heatmap-out-dir",
+        type=Path,
+        default=None,
+        help="Output directory for the heatmap image. Default: ./rinami_heatmap_outputs",
+    )
+    parser.add_argument(
+        "--heatmap-dpi",
+        type=int,
+        default=300,
+        help="DPI for the saved heatmap image. Default: 300.",
+    )
+    parser.add_argument(
         "--keep-temp",
         action="store_true",
         help="Keep temporary processed_data files after inference.",
@@ -92,8 +129,10 @@ def resolve_lpm_checkpoints(lpm_root: Path, splits: Iterable[int]) -> List[Path]
         if not ckpt.exists():
             raise FileNotFoundError(f"LPM checkpoint was not found: {ckpt}")
         ckpt_paths.append(ckpt)
+
     if len(ckpt_paths) == 0:
         raise ValueError("No LPM checkpoints were specified.")
+
     return ckpt_paths
 
 
@@ -116,6 +155,7 @@ def copy_non_esm_modules(src_model: torch.nn.Module, dst_model: torch.nn.Module)
     missing, unexpected = dst_model.load_state_dict(filtered_state, strict=False)
     missing = [x for x in missing if not x.startswith(skip_prefix)]
     unexpected = [x for x in unexpected if not x.startswith(skip_prefix)]
+
     if unexpected:
         raise RuntimeError(f"Unexpected keys while copying model modules: {unexpected}")
     if missing:
@@ -136,6 +176,7 @@ def build_lpm_ensemble(ckpt_paths: List[Path], esm_size: int) -> List[torch.nn.M
         param.requires_grad = False
 
     ensemble_models = [base_model]
+    print(f"[INFO] Loaded LPM head 1/{len(ckpt_paths)}: {ckpt_paths[0]}")
 
     for idx, ckpt_path in enumerate(ckpt_paths[1:], start=2):
         model_i = RINAMIInterpretableMultiTask(dropout=0.1, ESM_size=esm_size).to(device)
@@ -153,7 +194,6 @@ def build_lpm_ensemble(ckpt_paths: List[Path], esm_size: int) -> List[torch.nn.M
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
 
-    print(f"[INFO] Loaded LPM head 1/{len(ckpt_paths)}: {ckpt_paths[0]}")
     return ensemble_models
 
 
@@ -179,9 +219,13 @@ def run_feature_generation(input_dir: Path, node_rep_dir: Path, profile_dir: Pat
     profile_script = SCRIPT_DIR / "pdb_to_mpnn_output_profile.py"
 
     if not node_script.exists():
-        raise FileNotFoundError(f"ProteinMPNN node-representation script was not found: {node_script}")
+        raise FileNotFoundError(
+            f"ProteinMPNN node-representation script was not found: {node_script}"
+        )
     if not profile_script.exists():
-        raise FileNotFoundError(f"ProteinMPNN profile script was not found: {profile_script}")
+        raise FileNotFoundError(
+            f"ProteinMPNN profile script was not found: {profile_script}"
+        )
 
     subprocess.run(
         [sys.executable, str(node_script), str(input_dir), str(node_rep_dir)],
@@ -236,6 +280,119 @@ def predict_with_lpm_ensemble(
     }
 
 
+def save_residue_amino_acid_dG_matrix(
+    output_dir: Path,
+    input_data_name: str,
+    aa_seq: str,
+    pred: dict,
+    ckpt_paths: List[Path],
+    splits: List[int],
+) -> Path:
+    """Save the ensemble-averaged residue-amino-acid-wise dG matrix."""
+    output_dir.mkdir(parents=True, exist_ok=True)
+    out_path = output_dir / f"{input_data_name}_residue_amino_acid_wise_dG_mat.npz"
+
+    mat = pred["residue_amino_acid_wise_dG_mat_mean"][:len(aa_seq), :]
+    np.savez_compressed(
+        out_path,
+        residue_amino_acid_wise_dG_mat=mat,
+        sequence=np.array(aa_seq, dtype=object),
+        aa_order=np.array(list(AA_ORDER_CANONICAL), dtype=object),
+        pred_dG_each_model=np.asarray(pred["pred_dG_each_model"], dtype=float),
+        pred_dG_mean=np.asarray(pred["pred_dG_mean"], dtype=float),
+        pred_foldability_logit_each_model=np.asarray(
+            pred["pred_foldability_logit_each_model"], dtype=float
+        ),
+        pred_foldability_logit_mean=np.asarray(
+            pred["pred_foldability_logit_mean"], dtype=float
+        ),
+        pred_foldability_prob_each_model=np.asarray(
+            pred["pred_foldability_prob_each_model"], dtype=float
+        ),
+        pred_foldability_prob_mean=np.asarray(
+            pred["pred_foldability_prob_mean"], dtype=float
+        ),
+        ensemble_splits=np.asarray(splits, dtype=int),
+        ensemble_ckpts=np.asarray([str(x) for x in ckpt_paths], dtype=object),
+    )
+    return out_path
+
+
+def reorder_matrix_columns(mat: np.ndarray, source_order: str, target_order: str) -> np.ndarray:
+    """Reorder the amino-acid axis of a [L, 20] matrix."""
+    index_map = []
+    for aa in target_order:
+        if aa not in source_order:
+            raise ValueError(f"Amino acid {aa} was not found in source order {source_order}")
+        index_map.append(source_order.index(aa))
+    return mat[:, index_map]
+
+
+def make_xtick_positions_and_labels(aa_seq: str) -> Tuple[List[int], List[str]]:
+    """Make x ticks for all residues."""
+    positions = list(range(len(aa_seq)))
+    labels = [f"{aa_seq[i]}{i + 1}" for i in positions]
+    return positions, labels
+
+
+def save_residue_amino_acid_dG_heatmap(
+    output_dir: Path,
+    input_data_name: str,
+    aa_seq: str,
+    pred: dict,
+    dpi: int = 300,
+) -> Path:
+    """Save the ensemble-averaged residue-amino-acid-wise dG matrix as a heatmap image."""
+    output_dir.mkdir(parents=True, exist_ok=True)
+    out_path = output_dir / f"{input_data_name}_residue_amino_acid_wise_dG_mat_heatmap.png"
+
+    mat = pred["residue_amino_acid_wise_dG_mat_mean"][:len(aa_seq), :]
+    mat = reorder_matrix_columns(
+        mat=mat,
+        source_order=AA_ORDER_CANONICAL,
+        target_order=AA_ORDER_HEATMAP,
+    )
+
+    # Convert [L, 20] -> [20, L] for a heatmap with amino acids on the y-axis.
+    heatmap = mat.T
+
+    fig_width = max(10.0, len(aa_seq) * 0.28)
+    fig_height = 6.0
+
+    fig, ax = plt.subplots(figsize=(fig_width, fig_height))
+    im = ax.imshow(
+        heatmap,
+        aspect="auto",
+        interpolation="nearest",
+        cmap="coolwarm",
+        vmin=-1.0,
+        vmax=1.0,
+    )
+
+    xticks, xticklabels = make_xtick_positions_and_labels(aa_seq)
+    ax.set_xticks(xticks)
+    ax.set_xticklabels(xticklabels, rotation=90, fontsize=8)
+
+    ax.set_yticks(range(len(AA_ORDER_HEATMAP)))
+    ax.set_yticklabels(list(AA_ORDER_HEATMAP), fontsize=10)
+
+    ax.set_xlabel("Residue position")
+    ax.set_ylabel("Amino acid")
+    ax.set_title(
+        f"Residue-amino-acid-wise dG matrix\n"
+        f"{input_data_name} | Predicted ΔG = {pred['pred_dG_mean']:.3f} kcal/mol"
+    )
+
+    cbar = fig.colorbar(im, ax=ax, pad=0.02)
+    cbar.set_label("Contribution to predicted ΔG")
+
+    fig.tight_layout()
+    fig.savefig(out_path, dpi=dpi, bbox_inches="tight")
+    plt.close(fig)
+
+    return out_path
+
+
 def cleanup_temp_dirs(*paths: Path) -> None:
     for path in paths:
         if path.exists():
@@ -259,9 +416,13 @@ def main() -> None:
         profile_path = profile_dir / f"{input_data_name}_profile.npy"
 
         if not node_rep_path.exists():
-            raise FileNotFoundError(f"Generated node representation was not found: {node_rep_path}")
+            raise FileNotFoundError(
+                f"Generated node representation was not found: {node_rep_path}"
+            )
         if not profile_path.exists():
-            raise FileNotFoundError(f"Generated ProteinMPNN profile was not found: {profile_path}")
+            raise FileNotFoundError(
+                f"Generated ProteinMPNN profile was not found: {profile_path}"
+            )
 
         ensemble_models = build_lpm_ensemble(ckpt_paths, esm_size=args.esm_size)
         pred = predict_with_lpm_ensemble(
@@ -284,6 +445,39 @@ def main() -> None:
             "Ensemble-averaged predicted foldability probability = "
             f"{pred['pred_foldability_prob_mean']:.6f}"
         )
+
+        if args.save_residue_amino_acid_dG_matrix:
+            matrix_out_dir = args.matrix_out_dir
+            if matrix_out_dir is None:
+                matrix_out_dir = SCRIPT_DIR / "rinami_matrix_outputs"
+            else:
+                matrix_out_dir = matrix_out_dir.expanduser().resolve()
+
+            matrix_path = save_residue_amino_acid_dG_matrix(
+                output_dir=matrix_out_dir,
+                input_data_name=input_data_name,
+                aa_seq=aa_seq,
+                pred=pred,
+                ckpt_paths=ckpt_paths,
+                splits=list(args.splits),
+            )
+            print(f"Saved residue-amino-acid-wise dG matrix: {matrix_path}")
+
+        if args.save_residue_amino_acid_dG_heatmap:
+            heatmap_out_dir = args.heatmap_out_dir
+            if heatmap_out_dir is None:
+                heatmap_out_dir = SCRIPT_DIR / "rinami_heatmap_outputs"
+            else:
+                heatmap_out_dir = heatmap_out_dir.expanduser().resolve()
+
+            heatmap_path = save_residue_amino_acid_dG_heatmap(
+                output_dir=heatmap_out_dir,
+                input_data_name=input_data_name,
+                aa_seq=aa_seq,
+                pred=pred,
+                dpi=args.heatmap_dpi,
+            )
+            print(f"Saved residue-amino-acid-wise dG heatmap: {heatmap_path}")
 
     finally:
         if not args.keep_temp:
