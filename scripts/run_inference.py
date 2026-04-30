@@ -44,10 +44,8 @@ AA_ORDER_HEATMAP = "QENHDRKTSAGMCLVIWYFP"
 sys.path.insert(0, str(RINAMI_DIR))
 sys.path.insert(0, str(SCRIPT_DIR))
 
-try:
-    from RINAMI_model_main_multitask import RINAMIInterpretableMultiTask
-except ImportError:
-    from RINAMI_model_main import RINAMIInterpretableMultiTask
+from RINAMI_model_main import RINAMIInterpretableMultiTask
+
 
 from util import get_sequence_from_single_chain_pdb
 

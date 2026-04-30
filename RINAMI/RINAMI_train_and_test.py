@@ -16,7 +16,7 @@ import tqdm
 from sklearn.metrics import average_precision_score, roc_auc_score
 from transformers import get_cosine_schedule_with_warmup
 
-from RINAMI_model_main_multitask import RINAMIInterpretableMultiTask
+from RINAMI_model_main import RINAMIInterpretableMultiTask
 from util import (
     AA_ORDER_PLOT,
     DEFAULT_ENSEMBLE_ROOT,
