@@ -62,9 +62,9 @@ def aa_sequences_to_padded_onehot(sequences, aa_order="ACDEFGHIKLMNPQRSTVWY", pa
     return torch.from_numpy(np.asarray(onehot_tensor, dtype=np.float32))
 
 
-######################################################################################################
-# Organize the list of features (shape of each feature = (seq_len, feature_dim)) into a padded batch #
-######################################################################################################
+#######################################################################
+# Organize the list of Structural representations into a padded batch #
+#######################################################################
 def pad_feature_matrices(feature_list, padding_value=0.0):
     """
     shape = (seq_len, feature_dim) 
@@ -92,29 +92,33 @@ def pad_feature_matrices(feature_list, padding_value=0.0):
 
 
 
-# ============================================================
-# Train-time sub-sampling ratio
-# 1.0 uses the full training dataset.
-# 0.8 randomly samples 80% of the training dataset at each epoch.
-# Validation, test, and export always use all samples.
-# ============================================================
+##################################################################
+# Train-time sub-sampling ratio                                  #
+# 1.0 uses the full training dataset.                            #
+# 0.8 randomly samples 80% of the training dataset at each epoch.#
+# Validation, test, and export always use all samples.           #
+##################################################################
 TRAIN_SAMPLE_FRACTION = 1.0
 ESM_SIZE = 320
 
 
-# ============================================================
-# Ensemble settings
-# ============================================================
+#########################################################################
+# Setting of the model ensemble comprising models trained on each split #
+#########################################################################
 DEFAULT_ENSEMBLE_ROOT = "../pth/lowest_performing_models"
 DEFAULT_ENSEMBLE_ROOT_TRAINED_BY_USER = "../pth/pth_RINAMI_trained"
 DEFAULT_ENSEMBLE_SPLITS = (1, 2, 3)
 
-
+#####################################################
+# Setting of the amino acid order for plot making   #
+#####################################################
 AA_ORDER_CANONICAL = "ACDEFGHIKLMNPQRSTVWY"
 AA_ORDER_PLOT = "QENHDRKTSAGMCLVIWYFP"
 AA_REORDER_INDEX = [AA_ORDER_CANONICAL.index(aa) for aa in AA_ORDER_PLOT]
 
-# Approximate maximum ASA values based on Tien et al. 2013.
+#############################################################
+# Approximate maximum ASA values based on Tien et al. 2013. #
+#############################################################
 MAX_ASA = {
     "A": 121.0, "R": 265.0, "N": 187.0, "D": 187.0, "C": 148.0,
     "Q": 214.0, "E": 214.0, "G": 97.0,  "H": 216.0, "I": 195.0,
@@ -122,6 +126,9 @@ MAX_ASA = {
     "S": 143.0, "T": 163.0, "W": 264.0, "Y": 255.0, "V": 165.0,
 }
 
+#################################################
+# Convering AA three letter into AA one letter  #
+#################################################
 THREE_TO_ONE = {
     "ALA": "A", "ARG": "R", "ASN": "N", "ASP": "D", "CYS": "C",
     "GLN": "Q", "GLU": "E", "GLY": "G", "HIS": "H", "ILE": "I",
@@ -129,6 +136,9 @@ THREE_TO_ONE = {
     "SER": "S", "THR": "T", "TRP": "W", "TYR": "Y", "VAL": "V",
 }
 
+########################################################
+# Pick wild-type protein structures and calculate RSA  #
+########################################################
 PDB_CANDIDATE_ROOTS = [
     "../processed_data/Mega_predicted_structure_pdb",
     ]
@@ -150,7 +160,6 @@ def resolve_wt_pdb_path(clean_name):
         f"No pdb file found for {clean_name}. "
         f"Tried roots: {PDB_CANDIDATE_ROOTS}"
     )
-
 
 def extract_residue_info_and_rsa(pdb_path):
     parser = PDBParser(QUIET=True)
@@ -188,7 +197,9 @@ def extract_residue_info_and_rsa(pdb_path):
 
     return residue_infos
 
-
+######################################################################
+# Prepare the list of pairs of residue-number and AA for plot making #
+######################################################################
 def align_residue_info_to_sequence(seq, residue_infos, pdb_path):
     pdb_seq = "".join(x["aa"] for x in residue_infos)
 
@@ -240,7 +251,9 @@ def make_residue_labels(seq, residue_infos, valid_len):
 
     return labels, np.array(buried_mask, dtype=bool), np.array(rsa_list, dtype=float), np.array(residue_numbers, dtype=int)
 
-
+#################################################
+# Saving the residue-amino-acid-wise ΔG matrix  #
+#################################################
 def save_interpretability_heatmap(
     residue_amino_acid_wise_dG_mat,
     valid_len,
@@ -295,6 +308,9 @@ def save_interpretability_heatmap(
     return buried_mask, rsa_array, residue_numbers
 
 
+##############################################################################################
+# Removing ":" or "|" from the Mega-scale variant names,to evade errors on the command line  #
+##############################################################################################
 def rename_data(data_name_in_df):
     name = str(data_name_in_df)
     if ":" in name:
@@ -303,7 +319,9 @@ def rename_data(data_name_in_df):
         name = name.replace("|", "_")
     return name
 
-
+##########################################
+# Calculations of the evaluation metrics #
+##########################################
 def safe_corr(x, y):
     x = np.asarray(x, dtype=float)
     y = np.asarray(y, dtype=float)
@@ -312,7 +330,6 @@ def safe_corr(x, y):
     if np.std(x) == 0 or np.std(y) == 0:
         return float("nan")
     return float(np.corrcoef(x, y)[0, 1])
-
 
 def safe_spearman(x, y):
     if len(x) < 2:
@@ -329,6 +346,9 @@ def safe_spearman(x, y):
     return float(val) if val == val else float("nan")
 
 
+################################################
+# Pos_weight for mitigating the data imbalance #
+################################################
 def compute_binary_pos_weight(labels):
     labels = np.asarray(labels, dtype=np.int64)
     n_pos = int((labels == 1).sum())
@@ -341,6 +361,9 @@ def compute_binary_pos_weight(labels):
     return torch.tensor(pos_weight, dtype=torch.float32, device=device), n_pos, n_neg
 
 
+###################################################################################
+# Random sampling of training data for each epoch, following the sample_fraction  #
+###################################################################################
 def get_sampled_indices(n_items, sample_fraction=1.0, shuffle=True):
     if n_items <= 0:
         return np.array([], dtype=np.int64)
@@ -396,6 +419,9 @@ def iterate_batches(dataset, batch_size, shuffle=True, sample_fraction=1.0):
         yield batch
 
 
+########################################
+# Loading data for the ΔG regression)  #
+########################################
 def build_regression_dataset_from_csv(
     csv_path,
     struct_root,
@@ -424,6 +450,9 @@ def build_regression_dataset_from_csv(
     }
 
 
+############################################################
+# Loading data for the foldability prediction (Mega-scale) #
+############################################################
 def build_classification_dataset_from_csv(
     csv_path,
     struct_root,
@@ -454,7 +483,9 @@ def build_classification_dataset_from_csv(
     }
 
 
-
+###############################
+# Loading the Mega-scale data #
+###############################
 def load_train_val(split_num, add_extremes_to_cls=True):
     base = "../processed_data/csv"
     struct_root = "../processed_data/Mega_ProteinMPNN_node_rep"
@@ -518,6 +549,11 @@ def load_mega_test(split_num):
         dg_col="dG_ML",
     )
 
+
+
+###############################################################
+# Data loading for the analysis to make Figure 4c, S3, S4, S5 #
+###############################################################
 def load_mega_test_and_val_wt_only(split_num):
     base = "../processed_data/csv"
     struct_root = "../processed_data/Mega_ProteinMPNN_node_rep"
@@ -581,7 +617,9 @@ def load_mega_test_and_val_wt_only(split_num):
         "pdbs": pdbs,
     }
 
-
+############################
+# Loading the Maxwell data #
+############################
 def build_maxwell_dataset():
     df = pd.read_csv("../processed_data/csv/Maxwell_clean_no_megascale_homologs.csv", low_memory=False)
 
@@ -620,6 +658,7 @@ def make_optimizer(model, base_lr=0.0, head_lr=1e-4, weight_decay=0.01):
         "interaction_proj",
         "aa_res_head",
         "CA_aa_seq_rep_and_node_rep",
+        "layer_norm",
     ]
 
     head_params, encoder_params = [], []
