@@ -322,7 +322,7 @@ def rename_data(data_name_in_df):
 ##########################################
 # Calculations of the evaluation metrics #
 ##########################################
-def safe_corr(x, y):
+def safe_corr(x, y): # Pearson's R
     x = np.asarray(x, dtype=float)
     y = np.asarray(y, dtype=float)
     if len(x) < 2:
@@ -331,7 +331,7 @@ def safe_corr(x, y):
         return float("nan")
     return float(np.corrcoef(x, y)[0, 1])
 
-def safe_spearman(x, y):
+def safe_spearman(x, y): # Spearman's R
     if len(x) < 2:
         return float("nan")
     res = spearmanr(x, y)
@@ -419,9 +419,9 @@ def iterate_batches(dataset, batch_size, shuffle=True, sample_fraction=1.0):
         yield batch
 
 
-########################################
-# Loading data for the ΔG regression)  #
-########################################
+###################################################
+# Loading data for the ΔG regression (Mega-scale) #
+###################################################
 def build_regression_dataset_from_csv(
     csv_path,
     struct_root,
@@ -649,7 +649,9 @@ def build_maxwell_dataset():
         "names": names,
     }
 
-
+#####################
+# Optimizer setting #
+#####################
 def make_optimizer(model, base_lr=0.0, head_lr=1e-4, weight_decay=0.01):
     head_keywords = [
         "MLP_pe_",
@@ -1036,9 +1038,9 @@ def _bootstrap_regression_metrics(pred_dg, true_dg, B=10000, seed=0, alpha=0.05)
     return summary
 
 
-# ============================================================
-# Ensemble helpers
-# ============================================================
+#############################
+# Model ensemble helpers    #
+#############################
 def resolve_ensemble_ckpts(ensemble_root=DEFAULT_ENSEMBLE_ROOT, splits=DEFAULT_ENSEMBLE_SPLITS):
     ckpt_paths = []
     for split in splits:
@@ -1252,9 +1254,9 @@ def evaluate_maxwell_ensemble_from_avg_matrix(
     return metrics
 
 
-# ============================================================
-# Garcia benchmark (ensemble)
-# ============================================================
+##################################################
+# Garcia benchmark (predict with model ensemble) #
+##################################################
 def load_garcia_benchmark_dataset(seq_len_threshold=300):
     header_to_label = {}
     for line in open("../processed_data/fasta/Garcia_benchmark_CD_measured.fasta"):
