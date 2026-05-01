@@ -436,8 +436,6 @@ def main() -> None:
         for ckpt in ckpt_paths:
             print(f"  - {ckpt}")
         print("Predicted ΔG for each LPM [kcal/mol]:")
-        for split, value in zip(args.splits, pred["pred_dG_each_model"]):
-            print(f"  split {split}: {value:.6f}")
         print(f"Ensemble-averaged predicted ΔG = {pred['pred_dG_mean']:.6f} [kcal/mol]")
         print(
             "Ensemble-averaged predicted foldability probability = "
