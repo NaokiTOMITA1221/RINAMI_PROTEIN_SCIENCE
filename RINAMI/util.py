@@ -181,8 +181,6 @@ def extract_residue_info_and_rsa(pdb_path):
                     "rsa": rsa,
                     "buried": rsa < 0.16,
                 })
-
-        # The first model is normally sufficient.
         break
 
     if len(residue_infos) == 0:
