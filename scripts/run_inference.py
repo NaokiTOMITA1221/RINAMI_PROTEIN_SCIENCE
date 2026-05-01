@@ -363,8 +363,8 @@ def save_residue_amino_acid_dG_heatmap(
         aspect="auto",
         interpolation="nearest",
         cmap="coolwarm",
-        vmin=-1.0,
-        vmax=1.0,
+        vmin=-.75,
+        vmax=.75,
     )
 
     xticks, xticklabels = make_xtick_positions_and_labels(aa_seq)
