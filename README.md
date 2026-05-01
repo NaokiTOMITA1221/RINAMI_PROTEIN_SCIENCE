@@ -35,7 +35,9 @@ Creation of the environment:
     
     python run_inference.py [your_pdb_path] --save-residue-amino-acid-dG-heatmap #If you need the residue-amino-acid-wise ΔG matrix.
     
-#Google Colab imprementation is provided on the link below:
+    
+#Google Colab implementation of RINAMI is provided on the link below:
+
 https://colab.research.google.com/drive/1N64vgfmstcEQP3i6mS33bS47IH9UVeCs?authuser=1#scrollTo=XNDMAz3ULByd
     
     
