@@ -273,7 +273,7 @@ def predict_with_lpm_ensemble(
         "pred_foldability_logit_each_model": pred_foldability_logit_list,
         "pred_foldability_logit_mean": float(np.mean(pred_foldability_logit_list)),
         "pred_foldability_prob_each_model": pred_foldability_prob_list,
-        "pred_foldability_prob_from_mean_logit": float(torch.sigmoid(torch.stack(pred_foldability_logit_list)).mean(dim=0))),
+        "pred_foldability_prob_from_mean_logit": float(torch.sigmoid(torch.stack(pred_foldability_logit_list)).mean(dim=0)),
         "residue_amino_acid_wise_dG_mat_mean": matrix_avg,
     }
 
