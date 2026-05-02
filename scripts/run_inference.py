@@ -273,7 +273,7 @@ def predict_with_lpm_ensemble(
         "pred_foldability_logit_each_model": pred_foldability_logit_list,
         "pred_foldability_logit_mean": float(np.mean(pred_foldability_logit_list)),
         "pred_foldability_prob_each_model": pred_foldability_prob_list,
-        "pred_foldability_prob_mean": float(np.mean(pred_foldability_prob_list)),
+        "pred_foldability_prob_from_mean_logit": float(torch.sigmoid(np.mean(pred_foldability_logit_list))),
         "residue_amino_acid_wise_dG_mat_mean": matrix_avg,
     }
 
@@ -438,8 +438,8 @@ def main() -> None:
         print("Predicted ΔG for each LPM [kcal/mol]:")
         print(f"Ensemble-averaged predicted ΔG = {pred['pred_dG_mean']:.6f} [kcal/mol]")
         print(
-            "Ensemble-averaged predicted foldability probability = "
-            f"{pred['pred_foldability_prob_mean']:.6f}"
+            "Predicted foldability probability from ensemble-averaged ΔG = "
+            f"{pred['pred_foldability_prob_from_mean_logit']:.6f}"
         )
 
         if args.save_residue_amino_acid_dG_matrix:
