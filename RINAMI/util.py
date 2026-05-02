@@ -27,6 +27,15 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 from Bio.PDB import PPBuilder
 
 def get_sequence_from_single_chain_pdb(pdb_path):
+    """
+
+    Args:
+        sequences            : AA-seq list
+        padding_value (float): default = 0.0
+
+    Returns:
+        np.ndarray: one-hot tensor (shape: (N, max_len, 20))
+    """
     parser = PDBParser(QUIET=True)
     structure = parser.get_structure("protein", pdb_path)
     ppb = PPBuilder()
@@ -39,7 +48,6 @@ def get_sequence_from_single_chain_pdb(pdb_path):
 
 def aa_sequences_to_padded_onehot(sequences, aa_order="ACDEFGHIKLMNPQRSTVWY", padding_value=0.0):
     """
-
     Args:
         sequences            : AA-seq list
         padding_value (float): default = 0.0
@@ -67,14 +75,12 @@ def aa_sequences_to_padded_onehot(sequences, aa_order="ACDEFGHIKLMNPQRSTVWY", pa
 #######################################################################
 def pad_feature_matrices(feature_list, padding_value=0.0):
     """
-    shape = (seq_len, feature_dim) 
-
     Args:
-        features             : List of features (np.ndarray)
-        padding_value (float): default = 0.0
+        Structural representations : List of features (np.ndarray : shape = (seq_len, feature_dim))
+        padding_value (float)      : default = 0.0
 
     Returns:
-        np.ndarray: batch tensor (shape: (batch_size, max_seq_len, feature_dim)) 
+        torch.tensor: shape = (batch_size, max_seq_len, feature_dim)) 
     """
     batch_size = len(feature_list)
     max_len = max(mat.shape[0] for mat in feature_list)
@@ -144,6 +150,15 @@ PDB_CANDIDATE_ROOTS = [
     ]
 
 def resolve_wt_pdb_path(clean_name):
+    """
+    Args:
+        clean_name of the Mega-scale protein: Protein name without ".pdb", "|", and ":" 
+
+    Returns:
+        the exact wild-type pdb path
+        
+    ※This function is used in the process of "load_mega_test_and_val_wt_only."
+    """
     candidates = []
 
     for root in PDB_CANDIDATE_ROOTS:
@@ -162,6 +177,13 @@ def resolve_wt_pdb_path(clean_name):
     )
 
 def extract_residue_info_and_rsa(pdb_path):
+    """
+    Args:
+        pdb_path
+
+    Returns:
+        residue_infos: {"aa": aa_seq, "resseq": list of residue numbers, "rsa": list of RSA-values, "buried": binary list of burial infomation} 
+    """
     parser = PDBParser(QUIET=True)
     structure = parser.get_structure("prot", pdb_path)
 
@@ -201,6 +223,13 @@ def extract_residue_info_and_rsa(pdb_path):
 # Prepare the list of pairs of residue-number and AA for plot making #
 ######################################################################
 def align_residue_info_to_sequence(seq, residue_infos, pdb_path):
+    """
+    Args:
+        aa_sequence, residue_infos extracted by "extract_residue_info_and_rsa", pdb_path
+    Process:
+        Checking whether the lengthes of the aa_sequence and structure matches or not
+    """
+    
     pdb_seq = "".join(x["aa"] for x in residue_infos)
 
     if len(pdb_seq) == len(seq):
@@ -230,6 +259,13 @@ def align_residue_info_to_sequence(seq, residue_infos, pdb_path):
 
 
 def make_residue_labels(seq, residue_infos, valid_len):
+    """
+    Args:
+        aa_sequence, residue_infos extracted by "extract_residue_info_and_rsa", valid_len(: length of aa_sequence initially input to RINAMI)
+
+    Returns:
+        Residue labels for the heatmap of residue-amino-acid-wise ΔG matrix: ["M1", "D2",...] 
+    """
     labels = []
     buried_mask = []
     rsa_list = []
@@ -260,8 +296,8 @@ def save_interpretability_heatmap(
     seq,
     residue_infos,
     png_path,
-    vmin=-.75,
-    vmax=.75,
+    vmin=-1.,
+    vmax=1.,
 ):
     valid_len = int(valid_len)
     residue_amino_acid_wise_dG_mat = residue_amino_acid_wise_dG_mat[:valid_len, :]
@@ -680,7 +716,9 @@ def make_optimizer(model, base_lr=0.0, head_lr=1e-4, weight_decay=0.01):
     )
     return optimizer
 
-
+####################################################
+# Model performance evaluation during the training #
+####################################################
 def evaluate_regression(
     model,
     dataset,
@@ -752,7 +790,9 @@ def composite_score(metrics):
     spearman = 0.0 if math.isnan(metrics["spearman"]) else metrics["spearman"]
     return pearson + spearman
 
-
+###############################################################################
+# Functions for an epoch training of foldability prediction and ΔG regression #
+###############################################################################
 def train_one_epoch_classification(
     model,
     dataset,
@@ -859,6 +899,10 @@ def train_one_epoch_regression(
     return running / max(n_batches, 1)
 
 
+
+############################################################################################
+# Helper functions for the bootstrap analysis in the Maxwell test and the Garcia benchmark #
+############################################################################################
 def _bootstrap_auc_ci(y_true, y_score, B=10000, seed=0, alpha=0.05):
     rng = np.random.default_rng(seed)
     y_true = np.asarray(y_true, dtype=int)
@@ -982,9 +1026,6 @@ def _paired_bootstrap_pr_auc_diff_ci(y_true, score_a, score_b, B=10000, seed=0, 
     return diff_hat, (ci_low, ci_high), diff_samples, p_diff_le_0
 
 
-# ============================================================
-# Bootstrap helpers for Maxwell ensemble regression test
-# ============================================================
 def _bootstrap_regression_metrics(pred_dg, true_dg, B=10000, seed=0, alpha=0.05):
     rng = np.random.default_rng(seed)
     pred_dg = np.asarray(pred_dg, dtype=float)
@@ -1105,41 +1146,6 @@ def build_shared_ensemble_models(ckpt_paths, ESM_size=ESM_SIZE, dropout=0.1):
     return ensemble_models
 
 
-def evaluate_regression_from_predictions(pred_dg, true_dg):
-    pred_dg = np.asarray(pred_dg, dtype=float)
-    true_dg = np.asarray(true_dg, dtype=float)
-
-    if len(pred_dg) == 0:
-        return {
-            "val_loss": float("nan"),
-            "pearson": float("nan"),
-            "spearman": float("nan"),
-            "rmse": float("nan"),
-            "mae": float("nan"),
-            "pred_dg": [],
-            "true_dg": [],
-        }
-
-    pred_t = torch.tensor(pred_dg, dtype=torch.float32)
-    true_t = torch.tensor(true_dg, dtype=torch.float32)
-    val_loss = float(F.huber_loss(pred_t, true_t, reduction="mean", delta=1.0).item())
-
-    pearson = safe_corr(pred_dg, true_dg)
-    spearman = safe_spearman(pred_dg, true_dg)
-    rmse = float(np.sqrt(np.mean((pred_dg - true_dg) ** 2)))
-    mae = float(np.mean(np.abs(pred_dg - true_dg)))
-
-    return {
-        "val_loss": val_loss,
-        "pearson": pearson,
-        "spearman": spearman,
-        "rmse": rmse,
-        "mae": mae,
-        "pred_dg": pred_dg.tolist(),
-        "true_dg": true_dg.tolist(),
-    }
-
-
 def _avg_ensemble_matrix_outputs(ensemble_models, seqs, structs, profiles):
     residue_amino_acid_wise_dG_mats = []
 
@@ -1170,7 +1176,9 @@ def _avg_ensemble_matrix_outputs(ensemble_models, seqs, structs, profiles):
         "foldability_prob": foldability_prob,
     }
 
-
+##############################################
+# Maxwell test (predict with model ensemble) #
+##############################################
 def evaluate_maxwell_ensemble_from_avg_matrix(
     ensemble_models,
     dataset,
@@ -1451,3 +1459,39 @@ def evaluate_foldability_ensemble_from_avg_matrix(
     }
 
 
+####################################################
+# Compute the evaluation metrics for ΔG regression #
+####################################################
+def evaluate_regression_from_predictions(pred_dg, true_dg):
+    pred_dg = np.asarray(pred_dg, dtype=float)
+    true_dg = np.asarray(true_dg, dtype=float)
+
+    if len(pred_dg) == 0:
+        return {
+            "val_loss": float("nan"),
+            "pearson": float("nan"),
+            "spearman": float("nan"),
+            "rmse": float("nan"),
+            "mae": float("nan"),
+            "pred_dg": [],
+            "true_dg": [],
+        }
+
+    pred_t = torch.tensor(pred_dg, dtype=torch.float32)
+    true_t = torch.tensor(true_dg, dtype=torch.float32)
+    val_loss = float(F.huber_loss(pred_t, true_t, reduction="mean", delta=1.0).item())
+
+    pearson = safe_corr(pred_dg, true_dg)
+    spearman = safe_spearman(pred_dg, true_dg)
+    rmse = float(np.sqrt(np.mean((pred_dg - true_dg) ** 2)))
+    mae = float(np.mean(np.abs(pred_dg - true_dg)))
+
+    return {
+        "val_loss": val_loss,
+        "pearson": pearson,
+        "spearman": spearman,
+        "rmse": rmse,
+        "mae": mae,
+        "pred_dg": pred_dg.tolist(),
+        "true_dg": true_dg.tolist(),
+    }

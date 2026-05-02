@@ -382,7 +382,7 @@ def save_residue_amino_acid_dG_heatmap(
     )
 
     cbar = fig.colorbar(im, ax=ax, pad=0.02)
-    cbar.set_label("Contribution to predicted ΔG")
+    cbar.set_label("Partial ΔG Score [kcal/mol]")
 
     fig.tight_layout()
     fig.savefig(out_path, dpi=dpi, bbox_inches="tight")
