@@ -274,9 +274,9 @@ def export_residue_contributions(trained_model_param, output_dir, ESM_size=ESM_S
                     **record
                 )
 
-# ============================================================
-# Garcia benchmark and Maxwell ensemble tests
-# ============================================================
+###############################################
+# Garcia benchmark and Maxwell ensemble tests #
+###############################################
 def test_model_with_maxwell_ensemble(
     ensemble_root=DEFAULT_ENSEMBLE_ROOT,
     ESM_size=ESM_SIZE,
@@ -286,7 +286,7 @@ def test_model_with_maxwell_ensemble(
     ckpt_paths = resolve_ensemble_ckpts(ensemble_root=ensemble_root, splits=DEFAULT_ENSEMBLE_SPLITS)
     ensemble_models = build_shared_ensemble_models(ckpt_paths, ESM_size=ESM_size, dropout=0.1)
 
-    print("[INFO] Maxwell ensemble evaluation uses averaged residue_amino_acid_wise_dG_mat over 5 heads")
+    print("[INFO] Maxwell ensemble evaluation uses averaged residue_amino_acid_wise_dG_mat over 3 heads")
     print("[INFO] foldability_logit is recomputed from the averaged matrix-derived dG")
 
     metrics = evaluate_maxwell_ensemble_from_avg_matrix(
