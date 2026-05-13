@@ -531,9 +531,9 @@ def run_garcia_benchmark_ensemble(
     plt.savefig("./Figures/Trained_model_Garcia_benchmark_ensemble_result_ROC_PR_AUC.pdf", bbox_inches="tight", dpi=300)
     plt.close()
 
-# ============================================================
-# CLI
-# ============================================================
+#######
+# CLI #
+#######
 if __name__ == "__main__":
     args = sys.argv
 
