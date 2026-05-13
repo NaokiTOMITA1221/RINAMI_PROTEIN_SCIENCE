@@ -126,7 +126,7 @@ class aa_seq2representation(nn.Module):
 ################################################################################
 '''
 Constructing this module is based on the following paper:
-Takuto Koyama, et al., Chemical Genomics Language Model toward Reliable and Explainable Compound-Protein Interaction Exploration, bioRxiv, 2024.
+Takuto Koyama, et al., Chemical Genomics Language Model toward Reliable and Explainable Compound-Protein Interaction Exploration, J. Cheminform., 2026.
 '''
 class MultiHeadCrossAttention(nn.Module):
     """
@@ -194,7 +194,7 @@ class MultiHeadCrossAttention(nn.Module):
 ##########################
 '''
 Constructing this module is based on the following paper:
-Takuto Koyama, et al., Chemical Genomics Language Model toward Reliable and Explainable Compound-Protein Interaction Exploration, bioRxiv, 2024.
+Takuto Koyama, et al., Chemical Genomics Language Model toward Reliable and Explainable Compound-Protein Interaction Exploration, J. Cheminform., 2026.
 '''
 class MLP(nn.Module):
     """
