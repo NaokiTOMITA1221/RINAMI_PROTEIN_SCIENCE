@@ -1278,7 +1278,7 @@ def load_garcia_benchmark_dataset(seq_len_threshold=300):
     if "Name" not in df.columns:
         raise KeyError("'Name' column was not found in ../processed_data/csv/Garcia_zero_shot_no_megascale_homologs_mmseqs_25seqid_80coverage.csv")
     if "AlphaFold_pLDDT3recycles" not in df.columns:
-        raise KeyError("'AlphaFold_pLDDT3recycles' column was not found in ../processed_data/csv/Garcia_zero_shot_clean_no_megascale_homologs.csv")
+        raise KeyError("'AlphaFold_pLDDT3recycles' column was not found in ../processed_data/csv/Garcia_zero_shot_no_megascale_homologs_mmseqs_25seqid_80coverage.csv")
     if "ESMFold_pLDDT" not in df.columns:
         raise KeyError("'ESMFold_pLDDT' column was not found in ../processed_data/csv/Garcia_zero_shot_no_megascale_homologs_mmseqs_25seqid_80coverage.csv")
 
