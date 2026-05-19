@@ -40,12 +40,9 @@ Creation of the environment:
 https://colab.research.google.com/drive/1N64vgfmstcEQP3i6mS33bS47IH9UVeCs?authuser=1#scrollTo=XNDMAz3ULByd
     
     
- # Preparation for training and testing RINAMI
+# Preparation for training and testing RINAMI
  
-Because of the data-size limitation, the data used for model training and testing are not put in this repository.
-After cloning this repository and making a directory named "processed_data" in the cloned repository, please download "csv.zip", deposited on Zenodo, into "processed_data" and unzip "csv.zip".
-
-Zenodo strage: https://zenodo.org/records/19842861
+Because of the data-size limitation, the structural data used for model training and testing are not put in this repository.
 
 When you try the training and test of RINAMI by yourself, structures of proteins in Mega-scale dataset, Maxwell dataset, and Garcia benchmark set should be predicted and saved into:
 
