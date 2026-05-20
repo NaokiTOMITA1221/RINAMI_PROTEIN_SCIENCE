@@ -985,7 +985,7 @@ def _copy_non_esm_modules(src_model, dst_model):
 
 
 def build_shared_ensemble_models(ckpt_paths, ESM_size=ESM_SIZE, dropout=0.1):
-    from RINAMI_model_main_multitask import RINAMIInterpretableMultiTask
+    from RINAMI_model_main import RINAMIInterpretableMultiTask
 
     if len(ckpt_paths) == 0:
         raise ValueError("ckpt_paths is empty")
