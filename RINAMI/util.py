@@ -657,7 +657,7 @@ def load_mega_test_and_val_wt_only(split_num):
 # Loading the Maxwell data #
 ############################
 def build_maxwell_dataset():
-    df = pd.read_csv("../processed_data/csv/Maxwell_no_detected_megascale_homologs_mmseqs_25seqid_80coverage.csv", low_memory=False)
+    df = pd.read_csv("../processed_data/csv/Maxwell_without_detected_megascale_homologs_mmseqs_25seqid_80coverage.csv", low_memory=False)
 
     seqs, dgs, structs, profiles, names = [], [], [], [], []
     for protein_id, seq, dg in zip(df["id"], df["sequence"], df["dg"]):
@@ -1150,14 +1150,14 @@ def load_garcia_benchmark_dataset(seq_len_threshold=300):
             header = line.replace(">", "").strip().replace(label, "")[:-1]
             header_to_label[header] = label
 
-    df = pd.read_csv("../processed_data/csv/Garcia_zero_shot_no_detected_megascale_homologs_mmseqs_25seqid_80coverage.csv")
+    df = pd.read_csv("../processed_data/csv/Garcia_zero_shot_without_detected_megascale_homologs_mmseqs_25seqid_80coverage.csv")
 
     if "Name" not in df.columns:
-        raise KeyError("'Name' column was not found in ../processed_data/csv/Garcia_zero_shot_no_detected_megascale_homologs_mmseqs_25seqid_80coverage.csv")
+        raise KeyError("'Name' column was not found in ../processed_data/csv/Garcia_zero_shot_without_detected_megascale_homologs_mmseqs_25seqid_80coverage.csv")
     if "AlphaFold_pLDDT3recycles" not in df.columns:
-        raise KeyError("'AlphaFold_pLDDT3recycles' column was not found in ../processed_data/csv/Garcia_zero_shot_no_detected_megascale_homologs_mmseqs_25seqid_80coverage.csv")
+        raise KeyError("'AlphaFold_pLDDT3recycles' column was not found in ../processed_data/csv/Garcia_zero_shot_without_detected_megascale_homologs_mmseqs_25seqid_80coverage.csv")
     if "ESMFold_pLDDT" not in df.columns:
-        raise KeyError("'ESMFold_pLDDT' column was not found in ../processed_data/csv/Garcia_zero_shot_no_detected_megascale_homologs_mmseqs_25seqid_80coverage.csv")
+        raise KeyError("'ESMFold_pLDDT' column was not found in ../processed_data/csv/Garcia_zero_shot_without_detected_megascale_homologs_mmseqs_25seqid_80coverage.csv")
 
     benchmark_data_dict = {}
     for name, af_plddt_3rec, esmfold_plddt in zip(
