@@ -24,12 +24,8 @@ from util import (
     DEFAULT_ENSEMBLE_SPLITS,
     ESM_SIZE,
     TRAIN_SAMPLE_FRACTION,
-    _bootstrap_auc_ci,
-    _bootstrap_pr_auc_ci,
     _bootstrap_regression_metrics,
     _avg_ensemble_matrix_outputs,
-    _paired_bootstrap_auc_diff_ci,
-    _paired_bootstrap_pr_auc_diff_ci,
     align_residue_info_to_sequence,
     build_maxwell_dataset,
     build_shared_ensemble_models,
@@ -435,101 +431,7 @@ def run_garcia_benchmark_ensemble(
             batch_size=1,
             print_predictions=False,
         )
-
-        B = 10000
-        seed_base = 1234 + int(seq_len_threshold)
-
-        # ROC-AUC bootstrap
-        auc_r_hat, (auc_r_lo, auc_r_hi), _, p_r_le_0p5 = _bootstrap_auc_ci(
-            exp_foldability, foldability_prob_RINAMI, B=B, seed=seed_base
-        )
-        auc_a_hat, (auc_a_lo, auc_a_hi), _, p_a_le_0p5 = _bootstrap_auc_ci(
-            exp_foldability, AF2_plddt, B=B, seed=seed_base + 1
-        )
-        auc_e_hat, (auc_e_lo, auc_e_hi), _, p_e_le_0p5 = _bootstrap_auc_ci(
-            exp_foldability, ESMFold_plddt, B=B, seed=seed_base + 2
-        )
-
-        diff_hat_ra, (diff_lo_ra, diff_hi_ra), _, p_diff_ra_le_0 = _paired_bootstrap_auc_diff_ci(
-            exp_foldability, foldability_prob_RINAMI, AF2_plddt, B=B, seed=seed_base + 3
-        )
-        diff_hat_re, (diff_lo_re, diff_hi_re), _, p_diff_re_le_0 = _paired_bootstrap_auc_diff_ci(
-            exp_foldability, foldability_prob_RINAMI, ESMFold_plddt, B=B, seed=seed_base + 4
-        )
-
-        # PR-AUC bootstrap
-        pr_r_hat, (pr_r_lo, pr_r_hi), _, p_pr_r_le_base = _bootstrap_pr_auc_ci(
-            exp_foldability, foldability_prob_RINAMI, B=B, seed=seed_base + 10
-        )
-        pr_a_hat, (pr_a_lo, pr_a_hi), _, p_pr_a_le_base = _bootstrap_pr_auc_ci(
-            exp_foldability, AF2_plddt, B=B, seed=seed_base + 11
-        )
-        pr_e_hat, (pr_e_lo, pr_e_hi), _, p_pr_e_le_base = _bootstrap_pr_auc_ci(
-            exp_foldability, ESMFold_plddt, B=B, seed=seed_base + 12
-        )
-
-        diff_hat_pr_ra, (diff_lo_pr_ra, diff_hi_pr_ra), _, p_diff_pr_ra_le_0 = _paired_bootstrap_pr_auc_diff_ci(
-            exp_foldability, foldability_prob_RINAMI, AF2_plddt, B=B, seed=seed_base + 13
-        )
-        diff_hat_pr_re, (diff_lo_pr_re, diff_hi_pr_re), _, p_diff_pr_re_le_0 = _paired_bootstrap_pr_auc_diff_ci(
-            exp_foldability, foldability_prob_RINAMI, ESMFold_plddt, B=B, seed=seed_base + 14
-        )
-
-        print(
-            f"[BOOT][ROC] RINAMI   AUC={auc_r_hat:.4f} 95%CI[{auc_r_lo:.4f},{auc_r_hi:.4f}] P(AUC<=0.5)={p_r_le_0p5:.4g}\n",
-            f"[BOOT][ROC] AF2      AUC={auc_a_hat:.4f} 95%CI[{auc_a_lo:.4f},{auc_a_hi:.4f}] P(AUC<=0.5)={p_a_le_0p5:.4g}\n",
-            f"[BOOT][ROC] ESMFold  AUC={auc_e_hat:.4f} 95%CI[{auc_e_lo:.4f},{auc_e_hi:.4f}] P(AUC<=0.5)={p_e_le_0p5:.4g}\n",
-            f"[BOOT][ROC] ΔAUC (RINAMI-AF2)     ={diff_hat_ra:.4f} 95%CI[{diff_lo_ra:.4f},{diff_hi_ra:.4f}] P(Δ<=0)={p_diff_ra_le_0:.4g}\n",
-            f"[BOOT][ROC] ΔAUC (RINAMI-ESMFold) ={diff_hat_re:.4f} 95%CI[{diff_lo_re:.4f},{diff_hi_re:.4f}] P(Δ<=0)={p_diff_re_le_0:.4g}\n",
-            f"[BOOT][PR ] RINAMI   AUC={pr_r_hat:.4f} 95%CI[{pr_r_lo:.4f},{pr_r_hi:.4f}] P(AUC<=baseline)={p_pr_r_le_base:.4g}\n",
-            f"[BOOT][PR ] AF2      AUC={pr_a_hat:.4f} 95%CI[{pr_a_lo:.4f},{pr_a_hi:.4f}] P(AUC<=baseline)={p_pr_a_le_base:.4g}\n",
-            f"[BOOT][PR ] ESMFold  AUC={pr_e_hat:.4f} 95%CI[{pr_e_lo:.4f},{pr_e_hi:.4f}] P(AUC<=baseline)={p_pr_e_le_base:.4g}\n",
-            f"[BOOT][PR ] ΔAUC (RINAMI-AF2)     ={diff_hat_pr_ra:.4f} 95%CI[{diff_lo_pr_ra:.4f},{diff_hi_pr_ra:.4f}] P(Δ<=0)={p_diff_pr_ra_le_0:.4g}\n",
-            f"[BOOT][PR ] ΔAUC (RINAMI-ESMFold) ={diff_hat_pr_re:.4f} 95%CI[{diff_lo_pr_re:.4f},{diff_hi_pr_re:.4f}] P(Δ<=0)={p_diff_pr_re_le_0:.4g}\n"
-        )
-
-        ROC_AUC_list.append(roc_auc)
-        ROC_AUC_AF2_list.append(auc_roc_AF_pLDDT_3rec)
-        ROC_AUC_ESMFold_list.append(auc_roc_ESMFold_pLDDT)
-
-        PR_AUC_list.append(pr_auc)
-        PR_AUC_AF2_list.append(auc_pr_AF_pLDDT_3rec)
-        PR_AUC_ESMFold_list.append(auc_pr_ESMFold_pLDDT)
-
-        true_pos_num_list.append(tpc)
-        true_neg_num_list.append(tnc)
-
-    xtick_labels = [f"{seq_len_threshold} ({tpc} : {tnc})" for seq_len_threshold, tpc, tnc in zip(seq_len_threshold_list, true_pos_num_list, true_neg_num_list)]
-
-    fig, axes = plt.subplots(2, 1, figsize=(8, 9), sharex=True)
-
-    # ROC-AUC
-    axes[0].set_ylim(0.5, 1.0)
-    axes[0].plot(seq_len_threshold_list, ROC_AUC_list, c="#f6adc6", linestyle="-", marker="o")
-    axes[0].plot(seq_len_threshold_list, ROC_AUC_AF2_list, c="gray", linestyle="--", marker="o", alpha=0.8)
-    axes[0].plot(seq_len_threshold_list, ROC_AUC_ESMFold_list, c="#6aaed6", linestyle=":", marker="o", alpha=0.9)
-    axes[0].legend(["RINAMI", "AlphaFold pLDDT", "ESMFold pLDDT"])
-    axes[0].set_ylabel("ROC-AUC", fontsize=12, fontweight="bold")
-
-    # PR-AUC
-    axes[1].set_ylim(0.5, 1.0)
-    axes[1].plot(seq_len_threshold_list, PR_AUC_list, c="#f6adc6", linestyle="-", marker="o")
-    axes[1].plot(seq_len_threshold_list, PR_AUC_AF2_list, c="gray", linestyle="--", marker="o", alpha=0.8)
-    axes[1].plot(seq_len_threshold_list, PR_AUC_ESMFold_list, c="#6aaed6", linestyle=":", marker="o", alpha=0.9)
-    axes[1].legend(["RINAMI", "AlphaFold pLDDT", "ESMFold pLDDT"])
-    axes[1].set_ylabel("PR-AUC", fontsize=12, fontweight="bold")
-    axes[1].set_xlabel("Sequence length threshold(Foldable : Not Foldable)", fontsize=12, fontweight="bold")
-    axes[1].set_xticks(seq_len_threshold_list)
-    axes[1].set_xticklabels(xtick_labels)
-
-    for ax in axes:
-        sns.despine(ax=ax)
-    
-    sb.call('mkdir -p ./Figures/', shell=True)
-    plt.tight_layout()
-    plt.savefig("./Figures/Trained_model_Garcia_benchmark_ensemble_result_ROC_PR_AUC.png", bbox_inches="tight", dpi=300)
-    plt.savefig("./Figures/Trained_model_Garcia_benchmark_ensemble_result_ROC_PR_AUC.pdf", bbox_inches="tight", dpi=300)
-    plt.close()
+        
 
 #######
 # CLI #

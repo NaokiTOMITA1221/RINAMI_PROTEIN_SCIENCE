@@ -657,7 +657,7 @@ def load_mega_test_and_val_wt_only(split_num):
 # Loading the Maxwell data #
 ############################
 def build_maxwell_dataset():
-    df = pd.read_csv("../processed_data/csv/Maxwell_no_megascale_homologs_mmseqs_25seqid_80coverage.csv", low_memory=False)
+    df = pd.read_csv("../processed_data/csv/Maxwell_no_detected_megascale_homologs_mmseqs_25seqid_80coverage.csv", low_memory=False)
 
     seqs, dgs, structs, profiles, names = [], [], [], [], []
     for protein_id, seq, dg in zip(df["id"], df["sequence"], df["dg"]):
@@ -900,132 +900,9 @@ def train_one_epoch_regression(
 
 
 
-############################################################################################
-# Helper functions for the bootstrap analysis in the Maxwell test and the Garcia benchmark #
-############################################################################################
-def _bootstrap_auc_ci(y_true, y_score, B=10000, seed=0, alpha=0.05):
-    rng = np.random.default_rng(seed)
-    y_true = np.asarray(y_true, dtype=int)
-    y_score = np.asarray(y_score, dtype=float)
-    N = y_true.shape[0]
-
-    auc_hat = float(roc_auc_score(y_true, y_score))
-
-    auc_samples = []
-    for _ in range(B):
-        idx = rng.integers(0, N, size=N)
-        y_b = y_true[idx]
-        s_b = y_score[idx]
-        if len(np.unique(y_b)) < 2:
-            continue
-        auc_samples.append(float(roc_auc_score(y_b, s_b)))
-
-    auc_samples = np.array(auc_samples, dtype=float)
-    if auc_samples.size == 0:
-        return auc_hat, (float("nan"), float("nan")), auc_samples, float("nan")
-
-    ci_low = float(np.quantile(auc_samples, alpha / 2))
-    ci_high = float(np.quantile(auc_samples, 1 - alpha / 2))
-    p_auc_le_0p5 = float((auc_samples <= 0.5).mean())
-
-    return auc_hat, (ci_low, ci_high), auc_samples, p_auc_le_0p5
-
-
-def _paired_bootstrap_auc_diff_ci(y_true, score_a, score_b, B=10000, seed=0, alpha=0.05):
-    rng = np.random.default_rng(seed)
-    y_true = np.asarray(y_true, dtype=int)
-    score_a = np.asarray(score_a, dtype=float)
-    score_b = np.asarray(score_b, dtype=float)
-    N = y_true.shape[0]
-
-    diff_hat = float(roc_auc_score(y_true, score_a) - roc_auc_score(y_true, score_b))
-
-    diff_samples = []
-    for _ in range(B):
-        idx = rng.integers(0, N, size=N)
-        y_b = y_true[idx]
-        a_b = score_a[idx]
-        b_b = score_b[idx]
-        if len(np.unique(y_b)) < 2:
-            continue
-        da = roc_auc_score(y_b, a_b)
-        db = roc_auc_score(y_b, b_b)
-        diff_samples.append(float(da - db))
-
-    diff_samples = np.array(diff_samples, dtype=float)
-    if diff_samples.size == 0:
-        return diff_hat, (float("nan"), float("nan")), diff_samples, float("nan")
-
-    ci_low = float(np.quantile(diff_samples, alpha / 2))
-    ci_high = float(np.quantile(diff_samples, 1 - alpha / 2))
-    p_diff_le_0 = float((diff_samples <= 0.0).mean())
-
-    return diff_hat, (ci_low, ci_high), diff_samples, p_diff_le_0
-
-
-def _bootstrap_pr_auc_ci(y_true, y_score, B=10000, seed=0, alpha=0.05):
-    rng = np.random.default_rng(seed)
-    y_true = np.asarray(y_true, dtype=int)
-    y_score = np.asarray(y_score, dtype=float)
-    N = y_true.shape[0]
-
-    pr_auc_hat = float(average_precision_score(y_true, y_score))
-
-    pr_auc_samples = []
-    for _ in range(B):
-        idx = rng.integers(0, N, size=N)
-        y_b = y_true[idx]
-        s_b = y_score[idx]
-        if len(np.unique(y_b)) < 2:
-            continue
-        pr_auc_samples.append(float(average_precision_score(y_b, s_b)))
-
-    pr_auc_samples = np.array(pr_auc_samples, dtype=float)
-    if pr_auc_samples.size == 0:
-        return pr_auc_hat, (float("nan"), float("nan")), pr_auc_samples, float("nan")
-
-    ci_low = float(np.quantile(pr_auc_samples, alpha / 2))
-    ci_high = float(np.quantile(pr_auc_samples, 1 - alpha / 2))
-    baseline = float(np.mean(y_true))
-    p_pr_auc_le_base = float((pr_auc_samples <= baseline).mean())
-
-    return pr_auc_hat, (ci_low, ci_high), pr_auc_samples, p_pr_auc_le_base
-
-
-def _paired_bootstrap_pr_auc_diff_ci(y_true, score_a, score_b, B=10000, seed=0, alpha=0.05):
-    rng = np.random.default_rng(seed)
-    y_true = np.asarray(y_true, dtype=int)
-    score_a = np.asarray(score_a, dtype=float)
-    score_b = np.asarray(score_b, dtype=float)
-    N = y_true.shape[0]
-
-    diff_hat = float(
-        average_precision_score(y_true, score_a) - average_precision_score(y_true, score_b)
-    )
-
-    diff_samples = []
-    for _ in range(B):
-        idx = rng.integers(0, N, size=N)
-        y_b = y_true[idx]
-        a_b = score_a[idx]
-        b_b = score_b[idx]
-        if len(np.unique(y_b)) < 2:
-            continue
-        da = average_precision_score(y_b, a_b)
-        db = average_precision_score(y_b, b_b)
-        diff_samples.append(float(da - db))
-
-    diff_samples = np.array(diff_samples, dtype=float)
-    if diff_samples.size == 0:
-        return diff_hat, (float("nan"), float("nan")), diff_samples, float("nan")
-
-    ci_low = float(np.quantile(diff_samples, alpha / 2))
-    ci_high = float(np.quantile(diff_samples, 1 - alpha / 2))
-    p_diff_le_0 = float((diff_samples <= 0.0).mean())
-
-    return diff_hat, (ci_low, ci_high), diff_samples, p_diff_le_0
-
-
+###################################################################
+# Helper functions for the bootstrap analysis in the Maxwell test #
+###################################################################
 def _bootstrap_regression_metrics(pred_dg, true_dg, B=10000, seed=0, alpha=0.05):
     rng = np.random.default_rng(seed)
     pred_dg = np.asarray(pred_dg, dtype=float)
@@ -1273,14 +1150,14 @@ def load_garcia_benchmark_dataset(seq_len_threshold=300):
             header = line.replace(">", "").strip().replace(label, "")[:-1]
             header_to_label[header] = label
 
-    df = pd.read_csv("../processed_data/csv/Garcia_zero_shot_no_megascale_homologs_mmseqs_25seqid_80coverage.csv")
+    df = pd.read_csv("../processed_data/csv/Garcia_zero_shot_no_detected_megascale_homologs_mmseqs_25seqid_80coverage.csv")
 
     if "Name" not in df.columns:
-        raise KeyError("'Name' column was not found in ../processed_data/csv/Garcia_zero_shot_no_megascale_homologs_mmseqs_25seqid_80coverage.csv")
+        raise KeyError("'Name' column was not found in ../processed_data/csv/Garcia_zero_shot_no_detected_megascale_homologs_mmseqs_25seqid_80coverage.csv")
     if "AlphaFold_pLDDT3recycles" not in df.columns:
-        raise KeyError("'AlphaFold_pLDDT3recycles' column was not found in ../processed_data/csv/Garcia_zero_shot_no_megascale_homologs_mmseqs_25seqid_80coverage.csv")
+        raise KeyError("'AlphaFold_pLDDT3recycles' column was not found in ../processed_data/csv/Garcia_zero_shot_no_detected_megascale_homologs_mmseqs_25seqid_80coverage.csv")
     if "ESMFold_pLDDT" not in df.columns:
-        raise KeyError("'ESMFold_pLDDT' column was not found in ../processed_data/csv/Garcia_zero_shot_no_megascale_homologs_mmseqs_25seqid_80coverage.csv")
+        raise KeyError("'ESMFold_pLDDT' column was not found in ../processed_data/csv/Garcia_zero_shot_no_detected_megascale_homologs_mmseqs_25seqid_80coverage.csv")
 
     benchmark_data_dict = {}
     for name, af_plddt_3rec, esmfold_plddt in zip(
