@@ -962,7 +962,11 @@ def _bootstrap_regression_metrics(pred_dg, true_dg, B=10000, seed=0, alpha=0.05)
 def resolve_ensemble_ckpts(ensemble_root=DEFAULT_ENSEMBLE_ROOT, splits=DEFAULT_ENSEMBLE_SPLITS):
     ckpt_paths = []
     for split in splits:
-        ckpt = os.path.join(ensemble_root, f"pth_split_{split}", "LPM.pth")
+        if ensemble_root==DEFAULT_ENSEMBLE_ROOT:
+            ckpt = os.path.join(ensemble_root, f"pth_split_{split}", "LPM.pth")
+        elif ensemble_root==DEFAULT_ENSEMBLE_ROOT_TRAINED_BY_USER:
+            ckpt = os.path.join(ensemble_root, f"pth_split_{split}", "best.pth")
+            
         if not os.path.exists(ckpt):
             raise FileNotFoundError(f"Ensemble checkpoint not found: {ckpt}")
         ckpt_paths.append(ckpt)

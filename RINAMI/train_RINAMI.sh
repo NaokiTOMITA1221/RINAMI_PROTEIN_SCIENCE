@@ -59,7 +59,7 @@ for split in ${SPLITS}; do
 
     if [[ "${RUN_MEGA_TEST}" == "1" ]]; then
         echo "[INFO] Mega_test for split ${split}"
-        "${PYTHON_BIN}" "${TRAIN_SCRIPT}" "${BEST_CKPT}" "Mega_test" "${split}" "${SPLIT_DIR}" 2>&1 | tee "${MEGA_LOG}"
+        "${PYTHON_BIN}" "${TRAIN_SCRIPT}" "${BEST_CKPT}" "Mega_test" "${split}" 2>&1 | tee "${MEGA_LOG}"
     fi
 
     echo "[INFO] finished split ${split}"

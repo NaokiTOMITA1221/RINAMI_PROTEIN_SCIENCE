@@ -440,7 +440,7 @@ if __name__ == "__main__":
     args = sys.argv
 
     # Train from scratch
-    if len(args) == 3:
+    if len(args) == 3 and args[1] not in ["Maxwell_test", "Garcia_test"]:
         model_save_path = args[1]
         split_num = int(args[2])
         print("Training mode: from scratch")
@@ -460,6 +460,12 @@ if __name__ == "__main__":
         print("Training mode: finetune")
         train_model(model_save_path, trained_model_param=trained_model_param, split_num=split_num)
 
+    elif len(args) == 5 and args[2] == "export_interpretability":
+        export_residue_contributions(args[1], args[4], split_num=args[3])
+
+    elif len(args) == 4 and args[2] == "Mega_test":
+        print("Mode: Mega_test")
+        test_model(args[1], split_num=int(args[3]))
 
     elif len(args) == 2 and args[1] == "Maxwell_test":
         print("Mode: Maxwell_test")
@@ -485,28 +491,28 @@ if __name__ == "__main__":
         print(
             "Usage:\n"
             "  train from scratch:\n"
-            "    python3 RINAMI_multitask_train_and_test.py <save_path> <split_num>\n"
+            "    python3 RINAMI_train_and_test.py <save_path> <split_num>\n"
             "\n"
             "  finetune:\n"
-            "    python3 RINAMI_multitask_train_and_test.py <save_path> <init_ckpt> <split_num>\n"
+            "    python3 RINAMI_train_and_test.py <save_path> <init_ckpt> <split_num>\n"
             "\n"
             "  Mega test:\n"
-            "    python3 RINAMI_multitask_train_and_test.py <ckpt> Mega_test <split_num> <dummy_outdir>\n"
+            "    python3 RINAMI_train_and_test.py <ckpt> Mega_test <split_num>\n"
             "\n"
             "  export:\n"
-            "    python3 RINAMI_multitask_train_and_test.py <ckpt> export_interpretability <split_num> <out_dir>\n"
+            "    python3 RINAMI_train_and_test.py <ckpt> export_interpretability <split_num> <out_dir>\n"
             "\n"
             "  Maxwell ensemble test (short):\n"
-            "    python3 RINAMI_multitask_train_and_test.py Maxwell_test\n"
+            "    python3 RINAMI_train_and_test.py Maxwell_test\n"
             "\n"
             "  Garcia ensemble test (short):\n"
-            "    python3 RINAMI_multitask_train_and_test.py Garcia_test\n"
+            "    python3 RINAMI_train_and_test.py Garcia_test\n"
             "\n"
             "  Maxwell ensemble test (legacy style):\n"
-            "    python3 RINAMI_multitask_train_and_test.py Maxwell_test USER_TRAINED\n"
+            "    python3 RINAMI_train_and_test.py Maxwell_test USER_TRAINED\n"
             "\n"
             "  Garcia ensemble test (legacy style):\n"
-            "    python3 RINAMI_multitask_train_and_test.py Garcia_test USER_TRAINED\n"
+            "    python3 RINAMI_train_and_test.py Garcia_test USER_TRAINED\n"
 
             )
 
