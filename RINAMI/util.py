@@ -688,7 +688,7 @@ def build_maxwell_dataset():
 #####################
 # Optimizer setting #
 #####################
-def make_optimizer(model, base_lr=0.0, head_lr=1e-4, weight_decay=0.01):
+def make_optimizer(model, base_lr=1e-6, head_lr=1e-4, weight_decay=0.01):
     head_keywords = [
         "MLP_pe_",
         "ProteinMPNN_rep_refine",
@@ -696,7 +696,6 @@ def make_optimizer(model, base_lr=0.0, head_lr=1e-4, weight_decay=0.01):
         "interaction_proj",
         "aa_res_head",
         "CA_aa_seq_rep_and_node_rep",
-        "layer_norm",
     ]
 
     head_params, encoder_params = [], []
