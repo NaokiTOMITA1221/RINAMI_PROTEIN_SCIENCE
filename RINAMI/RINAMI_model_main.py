@@ -43,9 +43,7 @@ class RINAMIInterpretableMultiTask(nn.Module):
         self.MLP_pe_node_rep = modules.MLP(self.pe_dim, self.mid_dim)
         self.MLP_pe_aa_seq = modules.MLP(self.pe_dim, self.mid_dim)          
         self.MLP_pe_interact_1 = modules.MLP(self.pe_dim, self.mid_dim)
-        self.MLP_pe_interact_2 = modules.MLP(self.pe_dim, self.mid_dim)
         self.MLP_pe_interact_3 = modules.MLP(self.pe_dim, self.mid_dim)
-        self.MLP_pe_interact_4 = modules.MLP(self.pe_dim, self.mid_dim)
         self.MLP_pe_residue_amino_acid_wise_dG_mat = modules.MLP(self.pe_dim, self.mid_dim)
         
         # Layer normalization.
