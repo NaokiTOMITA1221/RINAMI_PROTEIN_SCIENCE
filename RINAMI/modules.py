@@ -205,7 +205,7 @@ class MLP(nn.Module):
       out: converted tensor (shape is [batch_size, sequence_length, out_dim])
     """
 
-    def __init__(self, emb_dim, out_dim, dropout=0.1):
+    def __init__(self, emb_dim, out_dim, dropout=0.0):
 
         super().__init__()
         self.linear_1     = nn.Linear(emb_dim, emb_dim)

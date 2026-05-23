@@ -41,7 +41,7 @@ class RINAMIInterpretableMultiTask(nn.Module):
         
         # Positional encoding converters.
         self.MLP_pe_node_rep = modules.MLP(self.pe_dim, self.mid_dim)
-        self.MLP_pe_aa_seq = modules.MLP(self.pe_dim, self.mid_dim)          
+        self.MLP_pe_aa_seq = modules.MLP(self.pe_dim, self.mid_dim)
         self.MLP_pe_interact_1 = modules.MLP(self.pe_dim, self.mid_dim)
         self.MLP_pe_interact_3 = modules.MLP(self.pe_dim, self.mid_dim)
         self.MLP_pe_residue_amino_acid_wise_dG_mat = modules.MLP(self.pe_dim, self.mid_dim)
@@ -65,11 +65,11 @@ class RINAMIInterpretableMultiTask(nn.Module):
         )
 
         # Interaction representation to residue-amino-acid-wise dG matrix.
-        self.interaction_proj_1 = modules.MLP(self.mid_dim, self.mid_dim )
-        self.interaction_proj_2 = modules.MLP(self.mid_dim, self.mid_dim )
-        self.interaction_proj_3 = modules.MLP(self.mid_dim, self.mid_dim ) 
-        self.interaction_proj_4 = modules.MLP(self.mid_dim, self.mid_dim )
-        self.aa_res_head = modules.MLP(self.mid_dim, 20)
+        self.interaction_proj_1 = modules.MLP(self.mid_dim, self.mid_dim, dropout=self.dropout_rate)
+        self.interaction_proj_2 = modules.MLP(self.mid_dim, self.mid_dim, dropout=self.dropout_rate)
+        self.interaction_proj_3 = modules.MLP(self.mid_dim, self.mid_dim, dropout=self.dropout_rate)
+        self.interaction_proj_4 = modules.MLP(self.mid_dim, self.mid_dim, dropout=self.dropout_rate)
+        self.aa_res_head = modules.MLP(self.mid_dim, 20, dropout=self.dropout_rate)
         
         # Lambda value mentioned in Figure S6.
         self.register_buffer("alpha_in_sigmoid", torch.tensor(10.0))
