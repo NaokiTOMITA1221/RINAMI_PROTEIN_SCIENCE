@@ -44,7 +44,6 @@ class RINAMIInterpretableMultiTask(nn.Module):
         self.MLP_pe_aa_seq = modules.MLP(self.pe_dim, self.mid_dim, dropout=self.dropout_rate)
         self.MLP_pe_interact_1 = modules.MLP(self.pe_dim, self.mid_dim, dropout=self.dropout_rate)
         self.MLP_pe_interact_3 = modules.MLP(self.pe_dim, self.mid_dim, dropout=self.dropout_rate)
-        ##self.MLP_pe_residue_amino_acid_wise_dG_mat = modules.MLP(self.pe_dim, self.mid_dim, dropout=self.dropout_rate)
         
         # Layer normalization.
         self.layer_norm_aa_seq_rep    = nn.LayerNorm(self.aa_rep_dim)
@@ -79,7 +78,6 @@ class RINAMIInterpretableMultiTask(nn.Module):
         """Load checkpoints while accepting the previous matrix-name keys."""
         legacy_suffix = "aa_" + "res_" + "mat"
         renamed = {
-        ##    f"MLP_pe_{legacy_suffix}.": "MLP_pe_residue_amino_acid_wise_dG_mat.",
             f"layer_norm_{legacy_suffix}.": "layer_norm_residue_amino_acid_wise_dG_mat.",
         }
         remapped_state_dict = {}
