@@ -78,10 +78,10 @@ class RINAMIInterpretableMultiTask(nn.Module):
     def load_state_dict(self, state_dict, strict=True):
         """Load checkpoints while accepting the previous matrix-name keys."""
         legacy_suffix = "aa_" + "res_" + "mat"
-        ##renamed = {
+        renamed = {
         ##    f"MLP_pe_{legacy_suffix}.": "MLP_pe_residue_amino_acid_wise_dG_mat.",
-        ##    f"layer_norm_{legacy_suffix}.": "layer_norm_residue_amino_acid_wise_dG_mat.",
-        ##}
+            f"layer_norm_{legacy_suffix}.": "layer_norm_residue_amino_acid_wise_dG_mat.",
+        }
         remapped_state_dict = {}
         for key, value in state_dict.items():
             new_key = key
