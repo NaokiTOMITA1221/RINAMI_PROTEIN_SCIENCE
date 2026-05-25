@@ -78,7 +78,7 @@ def train_model(
 
     scheduler = get_cosine_schedule_with_warmup(
         optimizer,
-        num_warmup_steps=max(1, int(0.1 * total_steps)),
+        num_warmup_steps=max(1, int(0.01 * total_steps)),
         num_training_steps=max(2, total_steps),
     )
 
