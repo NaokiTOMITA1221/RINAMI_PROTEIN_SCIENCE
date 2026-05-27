@@ -688,7 +688,7 @@ def build_maxwell_dataset():
 #####################
 # Optimizer setting #
 #####################
-def make_optimizer(model, base_lr=1e-5, head_lr=1e-4, weight_decay=0.01):
+def make_optimizer(model, base_lr=1e-5, head_lr=1e-4, weight_decay=0.02):
     head_keywords = [
         "MLP_pe_",
         "ProteinMPNN_rep_refine",
