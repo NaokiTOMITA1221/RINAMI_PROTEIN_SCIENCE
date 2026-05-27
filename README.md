@@ -40,7 +40,7 @@ Creation of the environment:
 https://colab.research.google.com/drive/1N64vgfmstcEQP3i6mS33bS47IH9UVeCs?authuser=1#scrollTo=XNDMAz3ULByd
 
 # Split data, cluster definition, and benchmark data 
-Split data, cluster definition for data splitting, and benchmark data are available from the "processed_data/csv" directory.
+Split data, cluster definition for data splitting, and benchmark data are available from the "processed_data/csv/" directory.
 　 　
 # Preparation for training and testing RINAMI
  
@@ -54,7 +54,7 @@ When you try the training and test of RINAMI by yourself, structures of proteins
 
 respectively. Structural prediction typically takes about four day with ESMFold.
 
-※ When predicting the structures of Mega-scale examples, please replace ":" and "|" in each example name with '_'. (For instance, please save the predicted structure of the Mega-scale example, 'EA|run2_0325_0005.pdb_D1E', as 'EA_run2_0325_0005_D1E.pdb')
+※ When predicting the structures of Mega-scale examples, please replace ":" and "|" in each example name with "_". (For instance, please save the predicted structure of the Mega-scale example, 'EA|run2_0325_0005.pdb_D1E', as 'EA_run2_0325_0005_D1E.pdb')
 
 After the structural prediction, please generate ProteinMPNN node representation and ProteinMPNN output profile from the predicted structure and save them into properly made directories, following the process below.
     
@@ -70,6 +70,7 @@ After the structural prediction, please generate ProteinMPNN node representation
 
     cd RINAMI
     bash train_RINAMI.sh 
+Newly trained model's paramerters will be saved in the directory "pth/pth_RINAMI_trained/".
 
 # Test of RINAMI
 
