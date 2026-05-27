@@ -40,7 +40,7 @@ Creation of the environment:
 https://colab.research.google.com/drive/1N64vgfmstcEQP3i6mS33bS47IH9UVeCs?authuser=1#scrollTo=XNDMAz3ULByd
 
 # Split data, cluster definition, and benchmark data 
-Split data, cluster definition for data splitting, and benchmark data are available from the "processed_data/csv/" directory.
+Split data, cluster definitions for data splitting, and benchmark data are available from the "processed_data/csv/" directory.
 　 　
 # Preparation for training and testing RINAMI
  
