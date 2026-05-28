@@ -85,6 +85,8 @@ To train and test RINAMI by yourself, the protein structures in the Mega-scale d
 In this study, the Mega-scale and Garcia protein structures were predicted using ESMFold v1 implemented in the esm package version 2.0.0. The Maxwell protein structures were obtained from the "paper_SI/maxwell2009/af2_best/" directory in Cagiada et al.’s GitHub repository: "https://github.com/KULL-Centre/_2024_cagiada_stability". Structural prediction for all datasets typically takes about four days with ESMFold.
 
 
+
+
 Example workflow to prepare the structural information for the model training and testing.
 
 1. Prepare a FASTA file containing headers that begin with protein names and the corresponding amino acid sequences.
@@ -95,7 +97,7 @@ processed_data/fasta/Garcia_zero_shot_without_detected_megascale_homologs_mmseqs
 
 File content: 
 
->Fd_5S_1_False # ">{protein name}_{foldability label used for the Garcia benchmark test}
+>Fd_5S_1_False       # >{protein name}_{foldability label used for the Garcia benchmark test}
 LTWEIRVDDEELAEEIERDDPQATVTRKGNTVEVRVTSEDVVKRARERDPEATITRTG
 >NF7-02_True
 GETTQFDVDENSEKVKRLIRKAGLSEEELKKADIIVIVISRNPEELKRLEEIVRNLGADRIIKLNVDENPEQVRQFAEEAGIPPEKLKRIDYLVVIISKTKEEAKELAERIKRQG
