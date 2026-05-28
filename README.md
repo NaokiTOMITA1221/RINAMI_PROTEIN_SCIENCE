@@ -73,15 +73,17 @@ processed_data/csv/
 
 # Preparation for training and testing RINAMI
  
-Because of the data-size limitation, the structural data used for model training and testing are not put in this repository.
+Due to data-size limitations, the structural data used for model training and testing are not included in this repository.
 
-When you try the training and test of RINAMI by yourself, structures of proteins in Mega-scale dataset, Maxwell dataset, and Garcia benchmark set should be predicted and saved into:
+To train and test RINAMI by yourself, the protein structures in the Mega-scale dataset, Maxwell dataset, and Garcia benchmark dataset should be predicted or prepared and saved in the following directories:
 
     processed_data/Mega_predicted_structure_pdb 
     processed_data/Maxwell_predicted_structure_pdb 
     processed_data/Garcia_benchmark_predicted_structure_pdb
 
-respectively. In this study, the Mega-scale and Garcia protein structures were predicted using ESMFold v1 implemented in the esm package version 2.0.0. Maxwell protein structures were taken from the directory "paper_SI/maxwell2009/af2_best/" in Cagiada's github repository:  https://github.com/KULL-Centre/_2024_cagiada_stability. Structural prediction for all data typically takes about four day with ESMFold.
+In this study, the Mega-scale and Garcia protein structures were predicted using ESMFold v1 implemented in the esm package version 2.0.0. The Maxwell protein structures were obtained from the paper_SI/maxwell2009/af2_best/ directory in Cagiada et al.’s GitHub repository: https://github.com/KULL-Centre/_2024_cagiada_stability.
+
+Structural prediction for all datasets typically takes about four days with ESMFold.
 
 ※ When predicting the structures of Mega-scale examples, please replace ":" and "|" in each example name with "_". (For instance, please save the predicted structure of the Mega-scale example, 'EA|run2_0325_0005.pdb_D1E', as 'EA_run2_0325_0005_D1E.pdb')
 
