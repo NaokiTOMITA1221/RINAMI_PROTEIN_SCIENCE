@@ -107,4 +107,5 @@ After the structural prediction, please generate ProteinMPNN node representation
     python3 RINAMI_train_and_test.py [model param path] Mega_test [split num] #Mega-scale test
     python3 RINAMI_train_and_test.py Maxwell_test USER_TRAINED #Maxwell benchmark test
     python3 RINAMI_train_and_test.py Garcia_test USER_TRAINED #Garcia benchmark test
+※ The argument [split num] in RINAMI_train_and_test.py should be set to 1, 2, or 3 to use split_1, split_2, or split_3, respectively.
     
