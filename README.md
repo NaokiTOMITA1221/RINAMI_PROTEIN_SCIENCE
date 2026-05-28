@@ -105,6 +105,8 @@ GETTQFDVDENSEKVKRLIRKAGLSEEELKKADIIVIVISRNPEELKRLEEIVRNLGADRIIKLNVDENPEQVRQFAEEA
                         .
                         .
 ```
+※ When preparing the FASTA file for the Mega-scale dataset, please replace ":" and "|" in each protein name with "_" and remove ".pdb" (For instance, please convert the protein name 'EA|run2_0325_0005.pdb_D1E' into 'EA_run2_0325_0005_D1E').
+
 2. Run the ESMFold prediction.
 ```
 Example for the Garcia dataset: 
@@ -114,7 +116,7 @@ python run_ESMFold_prediction.py  \
 ../processed_data/fasta/Garcia_zero_shot_without_detected_megascale_homologs_mmseqs_25seqid_80coverage.fasta \
 ../processed_data/Garcia_benchmark_predicted_structure_pdb/
 ```
-※ When preparing the FASTA file for the Mega-scale dataset, please replace ":" and "|" in each protein name with "_" and remove ".pdb". (For instance, please convert the protein name 'EA|run2_0325_0005.pdb_D1E' into 'EA_run2_0325_0005_D1E')
+
 
 3. After the structural prediction, please generate ProteinMPNN node representation and ProteinMPNN output profile from the predicted structure and save them into properly made directories, following the process below.
 ```
