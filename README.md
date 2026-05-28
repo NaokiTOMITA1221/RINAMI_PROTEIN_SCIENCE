@@ -105,7 +105,6 @@ After the structural prediction, please generate ProteinMPNN node representation
 
     cd RINAMI
     python3 RINAMI_train_and_test.py [model param path] Mega_test [split num] [dummy_outdir path] #Mega-scale test
-    python3 RINAMI_train_and_test.py [model param path] export_interpretability [split num] [out_dir path] #Extracting residue-amino-acid-wise ΔG matrix of wild-type proteins in Mega-scale validation and test subdatasets
     python3 RINAMI_train_and_test.py Maxwell_test USER_TRAINED #Maxwell benchmark test
     python3 RINAMI_train_and_test.py Garcia_test USER_TRAINED #Garcia benchmark test
     
