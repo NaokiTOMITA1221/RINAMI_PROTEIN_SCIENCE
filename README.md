@@ -33,7 +33,7 @@ Creation of the environment:
 cd scripts
 python run_inference.py [your_pdb_path] 
     
-#If you need the residue-amino-acid-wise ΔG matrix.
+# If you need the residue-amino-acid-wise ΔG matrix.
 python run_inference.py [your_pdb_path] --save-residue-amino-acid-dG-heatmap 
 ```
     
@@ -110,19 +110,19 @@ The parameters of newly trained models will be saved in the directory "pth/pth_R
 ```
 cd RINAMI
 
-#Benchmarking on the Mega-scale test subdataset of the specified data split.
+# Benchmark on the Mega-scale test subdataset of the specified data split.
 python3 RINAMI_train_and_test.py [model param path] Mega_test [split num] 
 
-#Benchmarking on the Maxwell dataset using the lowest performing models.
+# Benchmark on the Maxwell dataset using the lowest-performing models.
 python3 RINAMI_train_and_test.py Maxwell_test
 
-#Benchmarking on the Garcia dataset using the lowest performing models.
+# Benchmark on the Garcia dataset using the lowest-performing models.
 python3 RINAMI_train_and_test.py Garcia_test
 
-#Benchmarking on the Maxwell dataset using the newly trained model parameters.
+# Benchmark on the Maxwell dataset using the newly trained model parameters.
 python3 RINAMI_train_and_test.py Maxwell_test USER_TRAINED 
 
-#Benchmarking on the Garcia dataset using the newly trained model parameters.
+# Benchmark on the Garcia dataset using the newly trained model parameters.
 python3 RINAMI_train_and_test.py Garcia_test USER_TRAINED 
 ```
 ※ The argument [split num] in RINAMI_train_and_test.py should be set to 1, 2, or 3 to use split_1, split_2, or split_3, respectively.
