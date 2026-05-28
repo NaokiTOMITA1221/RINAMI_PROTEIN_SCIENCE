@@ -42,6 +42,7 @@ https://colab.research.google.com/drive/1N64vgfmstcEQP3i6mS33bS47IH9UVeCs?authus
 # Split data, cluster definition, and benchmark data 
 Split data, cluster definitions for data splitting, and benchmark data are available from the "processed_data/csv/" directory.
 
+```
 processed_data/csv/
                 ├── split_1/              
                 ├── split_2/            
@@ -49,7 +50,7 @@ processed_data/csv/
                 ├── Maxwell_without_detected_megascale_homologs_mmseqs_25seqid_80coverage.csv 
                 ├── Garcia_zero_shot_without_detected_megascale_homologs_mmseqs_25seqid_80coverage.csv
                 └── Megascale_wt_clusters_defined_by_mmseqs_25seqid_80coverage.tsv
-
+```
 
 # Preparation for training and testing RINAMI
  
