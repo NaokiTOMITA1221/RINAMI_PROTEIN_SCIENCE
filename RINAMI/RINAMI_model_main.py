@@ -137,7 +137,6 @@ class RINAMI(nn.Module):
         pos = pos.unsqueeze(0).unsqueeze(2).expand(aa_seq_reps.shape[0], -1, 1)    # [B, L, 1]
         pos_feat = torch.log1p(pos)
 
-        pe_w_abs_pos = torch.cat([pe, pos_feat], dim=-1)
 
         refined_aa_seq_reps = self.ESM_rep_refine(self.layer_norm_aa_seq_rep( aa_seq_reps ))              + self.MLP_pe_aa_seq(pe)
         refined_node_reps   = self.ProteinMPNN_rep_refine(self.layer_norm_node_rep( concated_node_reps )) + self.MLP_pe_node_rep(pe)
