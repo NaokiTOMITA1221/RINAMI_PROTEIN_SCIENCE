@@ -99,7 +99,9 @@ After the structural prediction, please generate ProteinMPNN node representation
 
     cd RINAMI
     bash train_RINAMI.sh 
- The parameters of newly trained models will be saved in the directory "pth/pth_RINAMI_trained/".
+
+After this execution, the model will be trained and tested once for each of the three splits: split_1, split_2, and split_3.
+The parameters of newly trained models will be saved in the directory "pth/pth_RINAMI_trained/".
 
 # Test of RINAMI
 
