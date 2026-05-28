@@ -43,9 +43,11 @@ https://colab.research.google.com/drive/1N64vgfmstcEQP3i6mS33bS47IH9UVeCs?authus
 Split data, cluster definitions for data splitting, and benchmark data are available from the "processed_data/csv/" directory.
 
 processed_data/csv/
-  ・Megascale_wt_clusters_defined_by_mmseqs_25seqid_80coverage.tsv
-      Cluster definitions for wild-type proteins in the Mega-scale dataset.
-      Clustering was performed using MMseqs2 with 25% sequence identity and 80% coverage.
+
+　・Megascale_wt_clusters_defined_by_mmseqs_25seqid_80coverage.tsv
+　
+　　　Cluster definitions for wild-type proteins in the Mega-scale dataset.
+　　　Clustering was performed using MMseqs2 with 25% sequence identity and 80% coverage.
 
   ・split_1/, split_2/, split_3/
       
