@@ -87,7 +87,7 @@ In this study, the Mega-scale and Garcia protein structures were predicted using
 
 
 
-An example workflow for preparing the structural information used for model training and testing is shown below.
+An example workflow for preparing the structural information used for model training and testing is shown below. Before following this workflow, please confirm that ESMFold is available in your execution environment with a setup equivalent to the one described above.
 
 1. Prepare a FASTA file containing headers that begin with protein names and the corresponding amino acid sequences.
 ```
