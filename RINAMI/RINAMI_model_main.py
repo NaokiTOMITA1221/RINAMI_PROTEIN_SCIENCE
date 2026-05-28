@@ -9,7 +9,7 @@ from util import aa_sequences_to_padded_onehot, pad_feature_matrices
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-class RINAMIInterpretableMultiTask(nn.Module):
+class RINAMI(nn.Module):
 
     def __init__(
         self,
@@ -179,10 +179,11 @@ class RINAMIInterpretableMultiTask(nn.Module):
         }
 
 
+
 class RINAMI_for_dG_regression(nn.Module):
     def __init__(self, device=device, dropout=0.1, ESM_size=320):
         super().__init__()
-        self.backbone = RINAMIInterpretableMultiTask(
+        self.backbone = RINAMI(
             device=device,
             dropout=dropout,
             ESM_size=ESM_size,
@@ -204,7 +205,7 @@ class RINAMI_for_dG_regression(nn.Module):
 class RINAMI_for_foldability_prediction(nn.Module):
     def __init__(self, device=device, dropout=0.1, ESM_size=320):
         super().__init__()
-        self.backbone = RINAMIInterpretableMultiTask(
+        self.backbone = RINAMI(
             device=device,
             dropout=dropout,
             ESM_size=ESM_size,

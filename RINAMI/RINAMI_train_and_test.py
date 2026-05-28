@@ -16,7 +16,7 @@ import tqdm
 from sklearn.metrics import average_precision_score, roc_auc_score
 from transformers import get_cosine_schedule_with_warmup
 
-from RINAMI_model_main import RINAMIInterpretableMultiTask
+from RINAMI_model_main import RINAMI
 from util import (
     AA_ORDER_PLOT,
     DEFAULT_ENSEMBLE_ROOT,
@@ -62,7 +62,7 @@ def train_model(
         add_extremes_to_cls=True,
     )
 
-    model = RINAMIInterpretableMultiTask(dropout=dropout, ESM_size=ESM_size).to(device)
+    model = RINAMI(dropout=dropout, ESM_size=ESM_size).to(device)
     if trained_model_param is not None:
         state = torch.load(trained_model_param, map_location=device)
         model.load_state_dict(state, strict=False)
@@ -187,7 +187,7 @@ def train_model(
 def test_model(trained_model_param, ESM_size=ESM_SIZE, batch_size=256, split_num=1):
     test_data = load_mega_test(split_num=split_num)
 
-    model = RINAMIInterpretableMultiTask(dropout=0.1, ESM_size=ESM_size).to(device)
+    model = RINAMI(dropout=0.1, ESM_size=ESM_size).to(device)
     model.load_state_dict(torch.load(trained_model_param, map_location=device), strict=False)
 
     metrics = evaluate_regression(model, test_data, batch_size=batch_size)
@@ -209,7 +209,7 @@ def export_residue_contributions(trained_model_param, output_dir, ESM_size=ESM_S
     os.makedirs(output_dir, exist_ok=True)
     test_data = load_mega_test_and_val_wt_only(split_num=split_num)
 
-    model = RINAMIInterpretableMultiTask(dropout=0.1, ESM_size=ESM_size).to(device)
+    model = RINAMI(dropout=0.1, ESM_size=ESM_size).to(device)
     model.load_state_dict(torch.load(trained_model_param, map_location=device), strict=False)
     model.eval()
 
