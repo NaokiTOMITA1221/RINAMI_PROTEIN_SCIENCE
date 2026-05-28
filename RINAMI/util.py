@@ -1147,7 +1147,7 @@ def evaluate_maxwell_ensemble_from_avg_matrix(
 ##################################################
 def load_garcia_benchmark_dataset(seq_len_threshold=300):
     header_to_label = {}
-    for line in open("../processed_data/fasta/Garcia_benchmark_CD_measured.fasta"):
+    for line in open("../processed_data/fasta/Garcia_zero_shot_without_detected_megascale_homologs_mmseqs_25seqid_80coverage.fasta"):
         if ">" in line:
             label = line.replace(">", "").strip().split("_")[-1]
             header = line.replace(">", "").strip().replace(label, "")[:-1]
