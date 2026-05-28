@@ -1,6 +1,6 @@
 # RINAMI: Residue-attributed Interpretable Neural network for predicting Absolute folding free energy by Merging structure and sequence Information
 !["Figure of architecture"](./Figure/Figure1_RINAMI.png)
-※The illustration of the character RINAMI HIMESAKI is a hand-drawn work created by the first author and is included for non-commercial purposes only.
+
 
     Tested environment:
     - NVIDIA Driver: 530.41.03
@@ -41,7 +41,34 @@ https://colab.research.google.com/drive/1N64vgfmstcEQP3i6mS33bS47IH9UVeCs?authus
 
 # Split data, cluster definition, and benchmark data 
 Split data, cluster definitions for data splitting, and benchmark data are available from the "processed_data/csv/" directory.
-　 　
+
+processed_data/csv/
+  ・Megascale_wt_clusters_defined_by_mmseqs_25seqid_80coverage.tsv
+      Cluster definitions for wild-type proteins in the Mega-scale dataset.
+      Clustering was performed using MMseqs2 with 25% sequence identity and 80% coverage.
+
+  ・split_1/, split_2/, split_3/
+      Train/validation/test split files used in this study.
+      
+      ・train_numeric_dG.csv
+         Data with numeric dG_ML values used for model training in both the ΔG regression and foldability prediction tasks.
+      ・train_dG_gt_5.csv
+         Data with dG_ML labels of ">5" used as extreme positive data for model training in the foldability prediction task.
+      ・train_dG_lt_minus1.csv
+         Data with dG_ML labels of "-1>" used as extreme negative data for model training in the foldability prediction task.
+      ・validation_numeric_dG.csv
+         Data with numeric dG_ML values used for model validation in both the ΔG regression and foldability prediction tasks.
+      ・test_numeric_dG.csv
+         Data with numeric dG_ML values used for model testing in both the ΔG regression and foldability prediction tasks.
+         
+      are put in each split folder.
+
+  ・Maxwell_without_detected_megascale_homologs_mmseqs_25seqid_80coverage.csv
+      Maxwell benchmark dataset after excluding detected Mega-scale homologs.
+
+  ・Garcia_zero_shot_without_detected_megascale_homologs_mmseqs_25seqid_80coverage.csv
+      Garcia benchmark dataset after excluding detected Mega-scale homologs.
+      
 # Preparation for training and testing RINAMI
  
 Because of the data-size limitation, the structural data used for model training and testing are not put in this repository.
@@ -63,8 +90,8 @@ After the structural prediction, please generate ProteinMPNN node representation
     python pdb_to_mpnn_output_profile.py ../processed_data/Mega_predicted_structure_pdb ../processed_data/Mega_ProteinMPNN_output_profile
     python pdb_to_mpnn_node_rep.py ../processed_data/Maxwell_predicted_structure_pdb ../processed_data/Maxwell_ProteinMPNN_node_rep
     python pdb_to_mpnn_output_profile.py ../processed_data/Maxwell_predicted_structure_pdb ../processed_data/Maxwell_ProteinMPNN_output_profile
-    python pdb_to_mpnn_node_rep.py ../processed_data/Garcia_benchmark_predicted_structure_pdb ../processed_data/Grcia_benchmark_ProteinMPNN_node_rep
-    python pdb_to_mpnn_output_profile.py ../processed_data/Garcia_benchmark_predicted_structure_pdb ../processed_data/Grcia_benchmark_ProteinMPNN_output_profile
+    python pdb_to_mpnn_node_rep.py ../processed_data/Garcia_benchmark_predicted_structure_pdb ../processed_data/Garcia_benchmark_ProteinMPNN_node_rep
+    python pdb_to_mpnn_output_profile.py ../processed_data/Garcia_benchmark_predicted_structure_pdb ../processed_data/Garcia_benchmark_ProteinMPNN_output_profile
     
 # Training of RINAMI
 
