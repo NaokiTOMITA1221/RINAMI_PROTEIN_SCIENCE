@@ -81,7 +81,7 @@ When you try the training and test of RINAMI by yourself, structures of proteins
     processed_data/Maxwell_predicted_structure_pdb 
     processed_data/Garcia_benchmark_predicted_structure_pdb
 
-respectively. Structural prediction typically takes about four day with ESMFold.
+respectively. In this study, the Mega-scale and Garcia protein structures were predicted using ESMFold v1 implemented in the esm package version 2.0.0. Maxwell protein structures were taken from the directory "paper_SI/maxwell2009/af2_best" in Cagiada's github repository:  https://github.com/KULL-Centre/_2024_cagiada_stability. Structural prediction for all data typically takes about four day with ESMFold.
 
 ※ When predicting the structures of Mega-scale examples, please replace ":" and "|" in each example name with "_". (For instance, please save the predicted structure of the Mega-scale example, 'EA|run2_0325_0005.pdb_D1E', as 'EA_run2_0325_0005_D1E.pdb')
 
