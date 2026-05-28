@@ -48,26 +48,34 @@ processed_data/csv/
       Clustering was performed using MMseqs2 with 25% sequence identity and 80% coverage.
 
   ・split_1/, split_2/, split_3/
-      Train/validation/test split files used in this study.
       
-      ・train_numeric_dG.csv
-         Data with numeric dG_ML values used for model training in both the ΔG regression and foldability prediction tasks.
-      ・train_dG_gt_5.csv
-         Data with dG_ML labels of ">5" used as extreme positive data for model training in the foldability prediction task.
-      ・train_dG_lt_minus1.csv
-         Data with dG_ML labels of "-1>" used as extreme negative data for model training in the foldability prediction task.
-      ・validation_numeric_dG.csv
-         Data with numeric dG_ML values used for model validation in both the ΔG regression and foldability prediction tasks.
-      ・test_numeric_dG.csv
-         Data with numeric dG_ML values used for model testing in both the ΔG regression and foldability prediction tasks.
+    Train/validation/test split files used in this study.
+      
+    ・train_numeric_dG.csv
+       
+       Data with numeric dG_ML values used for model training in both the ΔG regression and foldability prediction tasks.
+    ・train_dG_gt_5.csv
+       
+       Data with dG_ML labels of ">5" used as extreme positive data for model training in the foldability prediction task.
+    ・train_dG_lt_minus1.csv
+       
+       Data with dG_ML labels of "-1>" used as extreme negative data for model training in the foldability prediction task.
+    ・validation_numeric_dG.csv
+       
+       Data with numeric dG_ML values used for model validation in both the ΔG regression and foldability prediction tasks.
+    ・test_numeric_dG.csv
+       
+       Data with numeric dG_ML values used for model testing in both the ΔG regression and foldability prediction tasks.
          
-      are put in each split folder.
+    are put in each split folder.
 
   ・Maxwell_without_detected_megascale_homologs_mmseqs_25seqid_80coverage.csv
-      Maxwell benchmark dataset after excluding detected Mega-scale homologs.
+      
+    Maxwell benchmark dataset after excluding detected Mega-scale homologs.
 
   ・Garcia_zero_shot_without_detected_megascale_homologs_mmseqs_25seqid_80coverage.csv
-      Garcia benchmark dataset after excluding detected Mega-scale homologs.
+      
+    Garcia benchmark dataset after excluding detected Mega-scale homologs.
       
 # Preparation for training and testing RINAMI
  
