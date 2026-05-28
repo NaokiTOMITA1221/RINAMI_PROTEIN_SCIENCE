@@ -46,8 +46,8 @@ processed_data/csv/
 
 　・Megascale_wt_clusters_defined_by_mmseqs_25seqid_80coverage.tsv
 　
-　　　Cluster definitions for wild-type proteins in the Mega-scale dataset.
-　　　Clustering was performed using MMseqs2 with 25% sequence identity and 80% coverage.
+    Cluster definitions for wild-type proteins in the Mega-scale dataset.
+    Clustering was performed using MMseqs2 with 25% sequence identity and 80% coverage.
 
   ・split_1/, split_2/, split_3/
       
