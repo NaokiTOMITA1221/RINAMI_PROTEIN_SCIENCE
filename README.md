@@ -82,22 +82,47 @@ To train and test RINAMI by yourself, the protein structures in the Mega-scale d
     processed_data/Maxwell_predicted_structure_pdb/ 
     processed_data/Garcia_benchmark_predicted_structure_pdb/
 
-In this study, the Mega-scale and Garcia protein structures were predicted using ESMFold v1 implemented in the esm package version 2.0.0. The Maxwell protein structures were obtained from the "paper_SI/maxwell2009/af2_best/" directory in Cagiada et al.’s GitHub repository: https://github.com/KULL-Centre/_2024_cagiada_stability.
+In this study, the Mega-scale and Garcia protein structures were predicted using ESMFold v1 implemented in the esm package version 2.0.0. The Maxwell protein structures were obtained from the "paper_SI/maxwell2009/af2_best/" directory in Cagiada et al.’s GitHub repository: "https://github.com/KULL-Centre/_2024_cagiada_stability". Structural prediction for all datasets typically takes about four days with ESMFold.
 
-Structural prediction for all datasets typically takes about four days with ESMFold.
 
-※ When predicting the structures of Mega-scale examples, please replace ":" and "|" in each example name with "_". (For instance, please save the predicted structure of the Mega-scale example, 'EA|run2_0325_0005.pdb_D1E', as 'EA_run2_0325_0005_D1E.pdb')
+Example workflow to prepare the structural information for the model training and testing.
 
-After the structural prediction, please generate ProteinMPNN node representation and ProteinMPNN output profile from the predicted structure and save them into properly made directories, following the process below.
-    
-    cd scripts
-    python pdb_to_mpnn_node_rep.py ../processed_data/Mega_predicted_structure_pdb ../processed_data/Mega_ProteinMPNN_node_rep
-    python pdb_to_mpnn_output_profile.py ../processed_data/Mega_predicted_structure_pdb ../processed_data/Mega_ProteinMPNN_output_profile
-    python pdb_to_mpnn_node_rep.py ../processed_data/Maxwell_predicted_structure_pdb ../processed_data/Maxwell_ProteinMPNN_node_rep
-    python pdb_to_mpnn_output_profile.py ../processed_data/Maxwell_predicted_structure_pdb ../processed_data/Maxwell_ProteinMPNN_output_profile
-    python pdb_to_mpnn_node_rep.py ../processed_data/Garcia_benchmark_predicted_structure_pdb ../processed_data/Garcia_benchmark_ProteinMPNN_node_rep
-    python pdb_to_mpnn_output_profile.py ../processed_data/Garcia_benchmark_predicted_structure_pdb ../processed_data/Garcia_benchmark_ProteinMPNN_output_profile
-    
+1. Prepare a FASTA file containing headers that begin with protein names and the corresponding amino acid sequences.
+```
+Example file: 
+
+processed_data/fasta/Garcia_zero_shot_without_detected_megascale_homologs_mmseqs_25seqid_80coverage.fasta
+
+File content: 
+
+>Fd_5S_1_False # ">{protein name}_{foldability label used for the Garcia benchmark test}
+LTWEIRVDDEELAEEIERDDPQATVTRKGNTVEVRVTSEDVVKRARERDPEATITRTG
+>NF7-02_True
+GETTQFDVDENSEKVKRLIRKAGLSEEELKKADIIVIVISRNPEELKRLEEIVRNLGADRIIKLNVDENPEQVRQFAEEAGIPPEKLKRIDYLVVIISKTKEEAKELAERIKRQG
+                        .
+                        .
+                        .
+```
+2. Run the ESMFold prediction.
+```
+Example for the Garcia dataset: 
+
+cd scripts
+python run_ESMFold_prediction.py  \
+../processed_data/fasta/Garcia_zero_shot_without_detected_megascale_homologs_mmseqs_25seqid_80coverage.fasta \
+../processed_data/Garcia_benchmark_predicted_structure_pdb/
+```
+※ When preparing the FASTA file for the Mega-scale dataset, please replace ":" and "|" in each protein name with "_" and remove ".pdb". (For instance, please convert the protein name 'EA|run2_0325_0005.pdb_D1E' into 'EA_run2_0325_0005_D1E')
+
+3. After the structural prediction, please generate ProteinMPNN node representation and ProteinMPNN output profile from the predicted structure and save them into properly made directories, following the process below.
+```
+python pdb_to_mpnn_node_rep.py ../processed_data/Mega_predicted_structure_pdb ../processed_data/Mega_ProteinMPNN_node_rep
+python pdb_to_mpnn_output_profile.py ../processed_data/Mega_predicted_structure_pdb ../processed_data/Mega_ProteinMPNN_output_profile
+python pdb_to_mpnn_node_rep.py ../processed_data/Maxwell_predicted_structure_pdb ../processed_data/Maxwell_ProteinMPNN_node_rep
+python pdb_to_mpnn_output_profile.py ../processed_data/Maxwell_predicted_structure_pdb ../processed_data/Maxwell_ProteinMPNN_output_profile
+python pdb_to_mpnn_node_rep.py ../processed_data/Garcia_benchmark_predicted_structure_pdb ../processed_data/Garcia_benchmark_ProteinMPNN_node_rep
+python pdb_to_mpnn_output_profile.py ../processed_data/Garcia_benchmark_predicted_structure_pdb ../processed_data/Garcia_benchmark_ProteinMPNN_output_profile
+```
 # Training of RINAMI
 
     cd RINAMI
@@ -111,19 +136,19 @@ The parameters of newly trained models will be saved in the directory "pth/pth_R
 cd RINAMI
 
 # Benchmark on the Mega-scale test subdataset of the specified data split.
-python3 RINAMI_train_and_test.py [model param path] Mega_test [split num] 
+python RINAMI_train_and_test.py [model param path] Mega_test [split num] 
 
 # Benchmark on the Maxwell dataset using the lowest-performing models.
-python3 RINAMI_train_and_test.py Maxwell_test
+python RINAMI_train_and_test.py Maxwell_test
 
 # Benchmark on the Garcia dataset using the lowest-performing models.
-python3 RINAMI_train_and_test.py Garcia_test
+python RINAMI_train_and_test.py Garcia_test
 
 # Benchmark on the Maxwell dataset using the newly trained model parameters.
-python3 RINAMI_train_and_test.py Maxwell_test USER_TRAINED 
+python RINAMI_train_and_test.py Maxwell_test USER_TRAINED 
 
 # Benchmark on the Garcia dataset using the newly trained model parameters.
-python3 RINAMI_train_and_test.py Garcia_test USER_TRAINED 
+python RINAMI_train_and_test.py Garcia_test USER_TRAINED 
 ```
 ※ The argument [split num] in RINAMI_train_and_test.py should be set to 1, 2, or 3 to use split_1, split_2, or split_3, respectively.
     
