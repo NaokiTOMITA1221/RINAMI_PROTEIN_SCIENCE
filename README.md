@@ -44,7 +44,7 @@ Split data, cluster definitions for data splitting, and benchmark data are avail
 
 ```
 processed_data/csv/
-                ├── Megascale_wt_clusters_defined_by_mmseqs_25seqid_80coverage.tsv :     Cluster definitions for wild-type proteins in the Mega-scale dataset.Clustering was performed using MMseqs2 with 25% sequence identity and 80% coverage.
+                ├── Megascale_wt_clusters_defined_by_mmseqs_25seqid_80coverage.tsv : Cluster definitions for wild-type proteins in the Mega-scale dataset.Clustering was performed using MMseqs2 with 25% sequence identity and 80% coverage.
                 |
                 ├── split_1/             
                 |       ├── train_numeric_dG.csv        : Data with numeric dG_ML values used for model training in both the ΔG regression and foldability prediction tasks.
