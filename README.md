@@ -104,7 +104,7 @@ After the structural prediction, please generate ProteinMPNN node representation
 # Test of RINAMI
 
     cd RINAMI
-    python3 RINAMI_train_and_test.py [model param path] Mega_test [split num] [dummy_outdir path] #Mega-scale test
+    python3 RINAMI_train_and_test.py [model param path] Mega_test [split num] #Mega-scale test
     python3 RINAMI_train_and_test.py Maxwell_test USER_TRAINED #Maxwell benchmark test
     python3 RINAMI_train_and_test.py Garcia_test USER_TRAINED #Garcia benchmark test
     
