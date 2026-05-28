@@ -107,10 +107,23 @@ After this execution, the model will be trained and tested once for each of the 
 The parameters of newly trained models will be saved in the directory "pth/pth_RINAMI_trained/".
 
 # Test of RINAMI
+```
+cd RINAMI
 
-    cd RINAMI
-    python3 RINAMI_train_and_test.py [model param path] Mega_test [split num] #Mega-scale test
-    python3 RINAMI_train_and_test.py Maxwell_test USER_TRAINED #Maxwell benchmark test
-    python3 RINAMI_train_and_test.py Garcia_test USER_TRAINED #Garcia benchmark test
+#Benchmarking on the Mega-scale test subdataset of the specified data split.
+python3 RINAMI_train_and_test.py [model param path] Mega_test [split num] 
+
+#Benchmarking on the Maxwell dataset using the lowest performing models.
+python3 RINAMI_train_and_test.py Maxwell_test
+
+#Benchmarking on the Garcia dataset using the lowest performing models.
+python3 RINAMI_train_and_test.py Garcia_test
+
+#Benchmarking on the Maxwell dataset using the newly trained model parameters.
+python3 RINAMI_train_and_test.py Maxwell_test USER_TRAINED 
+
+#Benchmarking on the Garcia dataset using the newly trained model parameters.
+python3 RINAMI_train_and_test.py Garcia_test USER_TRAINED 
+```
 ※ The argument [split num] in RINAMI_train_and_test.py should be set to 1, 2, or 3 to use split_1, split_2, or split_3, respectively.
     
