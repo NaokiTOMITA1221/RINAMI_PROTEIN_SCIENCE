@@ -46,14 +46,14 @@ python run_inference.py [your_pdb_path] --save-residue-amino-acid-dG-heatmap
 ## Google Colab implementation of RINAMI is provided on the link below:
 https://colab.research.google.com/drive/1N64vgfmstcEQP3i6mS33bS47IH9UVeCs?authuser=1#scrollTo=XNDMAz3ULByd
 
-## Split data, cluster definition, and benchmark data 
+## Split data, cluster definitions, and benchmark data
 Split data, cluster definitions for data splitting, and benchmark data are available from the "processed_data/csv/" directory.
 
 ```
 processed_data/csv/
                 ├── Megascale_wt_clusters_defined_by_mmseqs_25seqid_80coverage.tsv : Cluster definitions for wild-type proteins in the Mega-scale dataset. Clustering was performed using MMseqs2 with 25% sequence identity and 80% coverage.
                 |
-                ├── split_1/             
+                ├── split_1/ : Each split directory contains the same five files listed below. 
                 |       ├── train_numeric_dG.csv        : Data with numeric dG_ML values used for model training in both the ΔG regression and foldability prediction tasks.
                 |       ├── train_dG_gt_5.csv           : Data with dG_ML labels of ">5" used as extreme positive data for model training in the foldability prediction task.
                 |       ├── train_dG_lt_minus1.csv      : Data with dG_ML labels of "<-1" used as extreme negative data for model training in the foldability prediction task.
@@ -88,7 +88,9 @@ To train and test RINAMI by yourself, the protein structures in the Mega-scale d
     processed_data/Maxwell_predicted_structure_pdb/ 
     processed_data/Garcia_benchmark_predicted_structure_pdb/
 
-In this study, the Mega-scale and Garcia protein structures were predicted using ESMFold v1 implemented in the esm package version 2.0.0. The Maxwell protein structures were obtained from the "paper_SI/maxwell2009/af2_best/" directory in Cagiada et al.’s GitHub repository: "https://github.com/KULL-Centre/_2024_cagiada_stability". Structural prediction for all datasets typically takes about four days with ESMFold.
+In this study, the Mega-scale and Garcia protein structures were predicted using ESMFold v1 implemented in the esm package version 2.0.0. The Maxwell protein structures were obtained from the `paper_SI/maxwell2009/af2_best/` directory in Cagiada et al.'s GitHub repository.:
+https://github.com/KULL-Centre/_2024_cagiada_stability
+Structural prediction for all datasets typically takes about four days with ESMFold.
 
 
 
