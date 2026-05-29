@@ -2,21 +2,22 @@
 !["Figure of architecture"](./Figure/Figure1_RINAMI.png)
 
 
-    Tested environment:
-    - NVIDIA Driver: 545.23.06
-    - CUDA: 12.3
-    - GPU: NVIDIA GeForce RTX 3080 Ti (12GB)
+## Tested environment:
+```
+- NVIDIA Driver: 545.23.06
+- CUDA: 12.3
+- GPU: NVIDIA GeForce RTX 3080 Ti (12GB)
             
-            and
+        and
             
-    - NVIDIA Driver: 530.41.03
-    - CUDA: 12.1
-    - GPU: NVIDIA GeForce RTX 3080 (10GB)
+- NVIDIA Driver: 530.41.03
+- CUDA: 12.1
+- GPU: NVIDIA GeForce RTX 3080 (10GB)
+```
 
 
 
-
-# Building an execution environment
+## Building an execution environment
 
 Cloning this repository:
 
@@ -33,7 +34,7 @@ Creation of the environment:
       -f https://data.pyg.org/whl/torch-2.4.0+cu121.html
 
 
-# Usage of RINAMI
+## Using RINAMI
 ```
 cd scripts
 python run_inference.py [your_pdb_path] 
@@ -42,10 +43,10 @@ python run_inference.py [your_pdb_path]
 python run_inference.py [your_pdb_path] --save-residue-amino-acid-dG-heatmap 
 ```
     
-# Google Colab implementation of RINAMI is provided on the link below:
+## Google Colab implementation of RINAMI is provided on the link below:
 https://colab.research.google.com/drive/1N64vgfmstcEQP3i6mS33bS47IH9UVeCs?authuser=1#scrollTo=XNDMAz3ULByd
 
-# Split data, cluster definition, and benchmark data 
+## Split data, cluster definition, and benchmark data 
 Split data, cluster definitions for data splitting, and benchmark data are available from the "processed_data/csv/" directory.
 
 ```
@@ -77,7 +78,7 @@ processed_data/csv/
                 └── Garcia_zero_shot_without_detected_megascale_homologs_mmseqs_25seqid_80coverage.csv : Garcia benchmark dataset after excluding detected Mega-scale homologs.
 ```
 
-# Preparation for training and testing RINAMI
+## Preparation for training and testing RINAMI
  
 Due to data-size limitations, the structural data used for model training and testing are not included in this repository.
 
@@ -132,7 +133,7 @@ python pdb_to_mpnn_output_profile.py ../processed_data/Maxwell_predicted_structu
 python pdb_to_mpnn_node_rep.py ../processed_data/Garcia_benchmark_predicted_structure_pdb ../processed_data/Garcia_benchmark_ProteinMPNN_node_rep
 python pdb_to_mpnn_output_profile.py ../processed_data/Garcia_benchmark_predicted_structure_pdb ../processed_data/Garcia_benchmark_ProteinMPNN_output_profile
 ```
-# Training of RINAMI
+## Training of RINAMI
 ```
 cd RINAMI
 bash train_RINAMI.sh 
@@ -140,7 +141,7 @@ bash train_RINAMI.sh
 After this execution, the model will be trained and tested once for each of the three splits: split_1, split_2, and split_3.
 The parameters of newly trained models will be saved in the directory "pth/pth_RINAMI_trained/".
 
-# Test of RINAMI
+## Testing RINAMI
 ```
 cd RINAMI
 
@@ -161,7 +162,7 @@ python RINAMI_train_and_test.py Garcia_test USER_TRAINED
 ```
 ※ The argument [split num] in RINAMI_train_and_test.py should be set to 1, 2, or 3 to use split_1, split_2, or split_3, respectively.
     
-# Test of Baseline model
+## Testing the baseline model
 
 ```
 cd RINAMI
