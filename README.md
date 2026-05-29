@@ -113,7 +113,7 @@ GETTQFDVDENSEKVKRLIRKAGLSEEELKKADIIVIVISRNPEELKRLEEIVRNLGADRIIKLNVDENPEQVRQFAEEA
                         .
                         .
 ```
-※ When preparing the FASTA file for the Mega-scale dataset, please replace ":" and "|" in each protein name with "_" and remove ".pdb" (For instance, please convert the protein name 'EA|run2_0325_0005.pdb_D1E' into 'EA_run2_0325_0005_D1E').
+Note: When preparing the FASTA file for the Mega-scale dataset, please replace ":" and "|" in each protein name with "_" and remove ".pdb" (For instance, please convert the protein name 'EA|run2_0325_0005.pdb_D1E' into 'EA_run2_0325_0005_D1E').
 
 2. Run the ESMFold prediction.
 ```
