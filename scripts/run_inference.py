@@ -44,7 +44,7 @@ AA_ORDER_HEATMAP = "QENHDRKTSAGMCLVIWYFP"
 sys.path.insert(0, str(RINAMI_DIR))
 sys.path.insert(0, str(SCRIPT_DIR))
 
-from RINAMI_model_main import RINAMIInterpretableMultiTask
+from RINAMI_model_main import RINAMI
 
 
 from util import get_sequence_from_single_chain_pdb
@@ -164,7 +164,7 @@ def build_lpm_ensemble(ckpt_paths: List[Path], esm_size: int) -> List[torch.nn.M
     """Build ensemble models while sharing a single frozen ESM encoder."""
     print(f"[INFO] Loading {len(ckpt_paths)} LPM checkpoints")
 
-    base_model = RINAMIInterpretableMultiTask(dropout=0.1, ESM_size=esm_size).to(device)
+    base_model = RINAMI(dropout=0.1, ESM_size=esm_size).to(device)
     load_state_dict_compat(base_model, ckpt_paths[0])
     base_model.eval()
 
@@ -177,10 +177,10 @@ def build_lpm_ensemble(ckpt_paths: List[Path], esm_size: int) -> List[torch.nn.M
     print(f"[INFO] Loaded LPM head 1/{len(ckpt_paths)}: {ckpt_paths[0]}")
 
     for idx, ckpt_path in enumerate(ckpt_paths[1:], start=2):
-        model_i = RINAMIInterpretableMultiTask(dropout=0.1, ESM_size=esm_size).to(device)
+        model_i = RINAMI(dropout=0.1, ESM_size=esm_size).to(device)
         model_i.aa_seq_encoder = shared_esm
 
-        tmp_model = RINAMIInterpretableMultiTask(dropout=0.1, ESM_size=esm_size).to(device)
+        tmp_model = RINAMI(dropout=0.1, ESM_size=esm_size).to(device)
         load_state_dict_compat(tmp_model, ckpt_path)
         copy_non_esm_modules(tmp_model, model_i)
         model_i.eval()
