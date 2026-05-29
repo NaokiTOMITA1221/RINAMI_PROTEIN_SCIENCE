@@ -37,10 +37,23 @@ Creation of the environment:
 ## Using RINAMI
 ```
 cd scripts
+
+# Inference for a single pdb
 python run_inference.py [your_pdb_path] 
     
-# If you need the residue-amino-acid-wise ΔG matrix.
-python run_inference.py [your_pdb_path] --save-residue-amino-acid-dG-heatmap 
+## If you need the residue-amino-acid-wise ΔG matrix.
+python run_inference_for_single_pdb.py [your_pdb_path] --save-residue-amino-acid-dG-heatmap 
+
+
+# Inference for batch pdb files
+python run_inference_for_pdb_batch.py [your_pdb_batch_dir_path] \
+    --out-csv [output_csv_path]
+    
+## If you need the residue-amino-acid-wise ΔG matrices.
+python run_inference_for_pdb_batch.py [your_pdb_batch_dir_path] \
+    --out-csv [output_csv_path] \
+    --save-residue-amino-acid-dG-heatmap \
+    --heatmap-out-dir [heatmap_save_dir_path]
 ```
     
 ## Google Colab implementation of RINAMI is provided on the link below:
