@@ -521,6 +521,7 @@ if __name__ == "__main__":
 
     else:
         print(
+        
             "Usage:\n"
             "  train from scratch:\n"
             "    python3 RINAMI_train_and_test.py <save_path> <split_num>\n"
@@ -551,8 +552,7 @@ if __name__ == "__main__":
             "\n"
             "  Garcia ensemble test (baseline models):\n"
             "    python3 RINAMI_train_and_test.py Garcia_test BASELINE\n"
-
-
+        
             )
 
 
