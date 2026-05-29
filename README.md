@@ -39,12 +39,10 @@ Creation of the environment:
 cd scripts
 
 # Inference for a single PDB file
-python run_inference.py [your_pdb_path]
+python run_inference_for_single_pdb.py [your_pdb_path] 
 
 # If you need the residue-amino-acid-wise ΔG heatmap for a single PDB file
-python run_inference.py [your_pdb_path] \
-    --save-residue-amino-acid-dG-heatmap \
-    --heatmap-out-dir [heatmap_save_dir_path]
+python run_inference_for_single_pdb.py [your_pdb_path] --save-residue-amino-acid-dG-heatmap 
 
 
 # Inference for multiple PDB files in a directory
@@ -57,6 +55,7 @@ python run_inference_for_pdb_batch.py [your_pdb_batch_dir_path] \
     --save-residue-amino-acid-dG-heatmap \
     --heatmap-out-dir [heatmap_save_dir_path]
 ```
+Note: Please replace `[your_pdb_path]`, `[your_pdb_batch_dir_path]`, `[output_csv_path]`, and `[heatmap_save_dir_path]` with the actual path to a PDB file, the path to a directory containing multiple PDB files, the path to the output CSV file, and the path to the directory where the output heatmaps will be saved, respectively. 
     
 ## Google Colab implementation of RINAMI is provided on the link below:
 https://colab.research.google.com/drive/1N64vgfmstcEQP3i6mS33bS47IH9UVeCs?authuser=1#scrollTo=XNDMAz3ULByd
