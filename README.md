@@ -168,4 +168,4 @@ cd RINAMI
 bash test_Baseline_RINAMI.sh
 ```
 After this execution, the model will be tested once for each of the three splits: split_1, split_2, and split_3.
-The Maxwell benchmark then will start.
+After these split-wise tests, the Maxwell benchmark will be performed.
