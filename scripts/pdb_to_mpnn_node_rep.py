@@ -1,14 +1,11 @@
 
 import torch
 import numpy as np
-from Bio.PDB import PDBParser, DSSP
 import os
 import glob
 import tqdm
-import torch
 import torch.nn as nn
 from protein_mpnn_utils import ProteinMPNN, tied_featurize, parse_PDB
-from model_utils import featurize
 import subprocess as sb
 import sys
 
