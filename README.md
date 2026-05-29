@@ -148,7 +148,6 @@ The parameters of newly trained models will be saved in the directory "pth/pth_R
 cd RINAMI
 
 # Benchmark on the Mega-scale test subdataset of the specified data split.
-# Replace `[model_parameter_path]` and `[split_num]` with the actual model checkpoint path and split number.
 python RINAMI_train_and_test.py [model_parameter_path] Mega_test [split_num]
 
 # Benchmark on the Maxwell dataset using the lowest-performing models.
@@ -163,7 +162,7 @@ python RINAMI_train_and_test.py Maxwell_test USER_TRAINED
 # Benchmark on the Garcia dataset using the newly trained model parameters.
 python RINAMI_train_and_test.py Garcia_test USER_TRAINED 
 ```
-Note: The `[split_num]` argument in `RINAMI_train_and_test.py` should be set to `1`, `2`, or `3` to use `split_1`, `split_2`, or `split_3`, respectively.
+Note: Please replace `[model_parameter_path]` and `[split_num]` with the actual model checkpoint path and split number. The `[split_num]` argument in `RINAMI_train_and_test.py` should be set to `1`, `2`, or `3` to use `split_1`, `split_2`, or `split_3`, respectively.
     
 ## Testing the baseline model
 
