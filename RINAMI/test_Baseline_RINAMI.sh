@@ -31,9 +31,9 @@ if [[ "${RUN_MEGA_TEST}" == "1" ]]; then
         LOG="${LOG_ROOT}/mega_test_split_${split}.log"
 
         echo "###########################################################"
-        echo "# Mega test: split ${split}                               #"
-        echo "#  ckpt : ${CKPT}                                         #"
-        echo "#  log  : ${LOG}                                          #"
+        echo "# Mega test: split ${split}                               "
+        echo "# ckpt : ${CKPT}                                         "
+        echo "# log  : ${LOG}                                          "
         echo "###########################################################"
 
         "${PYTHON_BIN}" "${TRAIN_SCRIPT}" "${CKPT}" Mega_test "${split}" BASELINE 2>&1 | tee "${LOG}"
@@ -45,8 +45,8 @@ fi
 if [[ "${RUN_MAXWELL_TEST}" == "1" ]]; then
     LOG="${LOG_ROOT}/maxwell_test.log"
     echo "###############################################################"
-    echo "# Maxwell ensemble test (baseline models)                     #"
-    echo "#  log  : ${LOG}                                              #"
+    echo "# Maxwell ensemble test (baseline models)                     "
+    echo "# log  : ${LOG}                                              "
     echo "###############################################################"
     "${PYTHON_BIN}" "${TRAIN_SCRIPT}" Maxwell_test BASELINE 2>&1 | tee "${LOG}"
     echo

@@ -6,7 +6,12 @@
     - NVIDIA Driver: 545.23.06
     - CUDA: 12.3
     - GPU: NVIDIA GeForce RTX 3080 Ti (12GB)
-
+            
+            and
+            
+    - NVIDIA Driver: 530.41.03
+    - CUDA: 12.1
+    - GPU: NVIDIA GeForce RTX 3080 (10GB)
 
 
 
