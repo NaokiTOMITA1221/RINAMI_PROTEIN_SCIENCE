@@ -148,7 +148,8 @@ The parameters of newly trained models will be saved in the directory "pth/pth_R
 cd RINAMI
 
 # Benchmark on the Mega-scale test subdataset of the specified data split.
-python RINAMI_train_and_test.py [model param path] Mega_test [split num] 
+# Replace `[model_parameter_path]` and `[split_num]` with the actual model checkpoint path and split number.
+python RINAMI_train_and_test.py [model_parameter_path] Mega_test [split_num]
 
 # Benchmark on the Maxwell dataset using the lowest-performing models.
 python RINAMI_train_and_test.py Maxwell_test
