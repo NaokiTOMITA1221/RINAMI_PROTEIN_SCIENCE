@@ -21,6 +21,7 @@ from util import (
     AA_ORDER_PLOT,
     DEFAULT_ENSEMBLE_ROOT,
     DEFAULT_ENSEMBLE_ROOT_TRAINED_BY_USER,
+    DEFAULT_ENSEMBLE_ROOT_BASELINE,
     DEFAULT_ENSEMBLE_SPLITS,
     ESM_SIZE,
     TRAIN_SAMPLE_FRACTION,
@@ -28,6 +29,7 @@ from util import (
     _avg_ensemble_matrix_outputs,
     align_residue_info_to_sequence,
     build_maxwell_dataset,
+    build_baseline_ensemble_models,
     build_shared_ensemble_models,
     composite_score,
     device,
@@ -184,10 +186,14 @@ def train_model(
     ))
 
 
-def test_model(trained_model_param, ESM_size=ESM_SIZE, batch_size=256, split_num=1):
+def test_model(trained_model_param, ESM_size=ESM_SIZE, batch_size=256, split_num=1, use_baseline=False):
     test_data = load_mega_test(split_num=split_num)
 
-    model = RINAMI(dropout=0.1, ESM_size=ESM_size).to(device)
+    if use_baseline:
+        from Baseline_RINAMI_model_main import BaselineRINAMI
+        model = BaselineRINAMI(dropout=0.1, ESM_size=ESM_size).to(device)
+    else:
+        model = RINAMI(dropout=0.1, ESM_size=ESM_size).to(device)
     model.load_state_dict(torch.load(trained_model_param, map_location=device), strict=False)
 
     metrics = evaluate_regression(model, test_data, batch_size=batch_size)
@@ -277,10 +283,14 @@ def test_model_with_maxwell_ensemble(
     ensemble_root=DEFAULT_ENSEMBLE_ROOT,
     ESM_size=ESM_SIZE,
     batch_size=256,
+    use_baseline=False,
 ):
     dataset = build_maxwell_dataset()
     ckpt_paths = resolve_ensemble_ckpts(ensemble_root=ensemble_root, splits=DEFAULT_ENSEMBLE_SPLITS)
-    ensemble_models = build_shared_ensemble_models(ckpt_paths, ESM_size=ESM_size, dropout=0.1)
+    if use_baseline:
+        ensemble_models = build_baseline_ensemble_models(ckpt_paths, ESM_size=ESM_size, dropout=0.1)
+    else:
+        ensemble_models = build_shared_ensemble_models(ckpt_paths, ESM_size=ESM_size, dropout=0.1)
 
     print("[INFO] Maxwell ensemble evaluation uses averaged residue_amino_acid_wise_dG_mat over 3 heads")
     print("[INFO] foldability_logit is recomputed from the averaged matrix-derived dG")
@@ -327,17 +337,26 @@ def test_model_with_garcia_benchmark_set_ensemble(
     threshold=0.5,
     seq_len_threshold=300,
     print_predictions=False,
+    use_baseline=False,
 ):
     dataset = load_garcia_benchmark_dataset(seq_len_threshold=seq_len_threshold)
     ckpt_paths = resolve_ensemble_ckpts(
         ensemble_root=ensemble_root,
         splits=DEFAULT_ENSEMBLE_SPLITS,
     )
-    ensemble_models = build_shared_ensemble_models(
-        ckpt_paths,
-        ESM_size=ESM_size,
-        dropout=0.1,
-    )
+    if use_baseline:
+        ensemble_models = build_baseline_ensemble_models(
+            ckpt_paths,
+            ESM_size=ESM_size,
+            dropout=0.1,
+        )
+    else:
+        ensemble_models = build_shared_ensemble_models(
+            ckpt_paths,
+            ESM_size=ESM_size,
+            dropout=0.1,
+        )
+
 
     metrics = evaluate_foldability_ensemble_from_avg_matrix(
         ensemble_models,
@@ -389,6 +408,7 @@ def test_model_with_garcia_benchmark_set_ensemble(
 def run_garcia_benchmark_ensemble(
     ensemble_root=DEFAULT_ENSEMBLE_ROOT,
     ESM_size=ESM_SIZE,
+    use_baseline=False,
 ):
     print("Test mode: Garcia_benchmark_ensemble_test")
 
@@ -407,7 +427,7 @@ def run_garcia_benchmark_ensemble(
 
     for seq_len_threshold in seq_len_threshold_list:
         print(
-            "***************************************************************************************************************************************************************************************************************************************"
+            "#######################################################################################################################################################################################################################################"
         )
         print(f"seq_len_threshold = {seq_len_threshold}")
 
@@ -430,6 +450,7 @@ def run_garcia_benchmark_ensemble(
             seq_len_threshold=seq_len_threshold,
             batch_size=1,
             print_predictions=False,
+            use_baseline=use_baseline,
         )
         
 
@@ -462,6 +483,10 @@ if __name__ == "__main__":
 
     elif len(args) == 5 and args[2] == "export_interpretability":
         export_residue_contributions(args[1], args[4], split_num=args[3])
+    
+    elif len(args) == 5 and args[2] == "Mega_test" and args[4] == "BASELINE":
+        print("Mode: Mega_test (baseline)")
+        test_model(args[1], split_num=int(args[3]), use_baseline=True)
 
     elif len(args) == 4 and args[2] == "Mega_test":
         print("Mode: Mega_test")
@@ -475,14 +500,21 @@ if __name__ == "__main__":
         print("Mode: Garcia_test")
         run_garcia_benchmark_ensemble()
 
-    elif len(args) == 3 and args[1] == "Maxwell_test":
-        print("Mode: Maxwell_test")
+    elif len(args) == 3 and args[1] == "Maxwell_test" and args[2] == "USER_TRAINED":
+        print("Mode: Maxwell_test (user trained)")
         test_model_with_maxwell_ensemble(ensemble_root=DEFAULT_ENSEMBLE_ROOT_TRAINED_BY_USER)
 
-    elif len(args) == 3 and args[1] == "Garcia_test":
-        print("Mode: Garcia_test")
+    elif len(args) == 3 and args[1] == "Garcia_test" and args[2] == "USER_TRAINED":
+        print("Mode: Garcia_test (user trained)")
         run_garcia_benchmark_ensemble(ensemble_root=DEFAULT_ENSEMBLE_ROOT_TRAINED_BY_USER)
 
+    elif len(args) == 3 and args[1] == "Maxwell_test" and args[2] == "BASELINE":
+        print("Mode: Maxwell_test (baseline models)")
+        test_model_with_maxwell_ensemble(ensemble_root=DEFAULT_ENSEMBLE_ROOT_BASELINE, use_baseline=True)
+
+    elif len(args) == 3 and args[1] == "Garcia_test" and args[2] == "BASELINE":
+        print("Mode: Garcia_test (baseline models)")
+        run_garcia_benchmark_ensemble(ensemble_root=DEFAULT_ENSEMBLE_ROOT_BASELINE, use_baseline=True)
 
 
 
@@ -513,6 +545,13 @@ if __name__ == "__main__":
             "\n"
             "  Garcia ensemble test (legacy style):\n"
             "    python3 RINAMI_train_and_test.py Garcia_test USER_TRAINED\n"
+            "\n"
+            "  Maxwell ensemble test (baseline models):\n"
+            "    python3 RINAMI_train_and_test.py Maxwell_test BASELINE\n"
+            "\n"
+            "  Garcia ensemble test (baseline models):\n"
+            "    python3 RINAMI_train_and_test.py Garcia_test BASELINE\n"
+
 
             )
 

@@ -113,6 +113,7 @@ ESM_SIZE = 320
 #########################################################################
 DEFAULT_ENSEMBLE_ROOT = "../pth/lowest_performing_models"
 DEFAULT_ENSEMBLE_ROOT_TRAINED_BY_USER = "../pth/pth_RINAMI_trained"
+DEFAULT_ENSEMBLE_ROOT_BASELINE = "../pth/baseline_models"
 DEFAULT_ENSEMBLE_SPLITS = (1, 2, 3)
 
 #####################################################
@@ -965,6 +966,8 @@ def resolve_ensemble_ckpts(ensemble_root=DEFAULT_ENSEMBLE_ROOT, splits=DEFAULT_E
             ckpt = os.path.join(ensemble_root, f"pth_split_{split}", "LPM.pth")
         elif ensemble_root==DEFAULT_ENSEMBLE_ROOT_TRAINED_BY_USER:
             ckpt = os.path.join(ensemble_root, f"pth_split_{split}", "best.pth")
+        elif ensemble_root == DEFAULT_ENSEMBLE_ROOT_BASELINE:
+            ckpt = os.path.join(ensemble_root, f"pth_split_{split}", "baseline.pth")
             
         if not os.path.exists(ckpt):
             raise FileNotFoundError(f"Ensemble checkpoint not found: {ckpt}")
@@ -1022,6 +1025,24 @@ def build_shared_ensemble_models(ckpt_paths, ESM_size=ESM_SIZE, dropout=0.1):
         del tmp_model
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
+
+    return ensemble_models
+
+
+def build_baseline_ensemble_models(ckpt_paths, ESM_size=ESM_SIZE, dropout=0.1):
+    from Baseline_RINAMI_model_main import BaselineRINAMI
+
+    if len(ckpt_paths) == 0:
+        raise ValueError("ckpt_paths is empty")
+
+    ensemble_models = []
+    for idx, ckpt in enumerate(ckpt_paths):
+        model_i = BaselineRINAMI(dropout=dropout, ESM_size=ESM_size).to(device)
+        state = torch.load(ckpt, map_location=device)
+        model_i.load_state_dict(state, strict=False)
+        model_i.eval()
+        ensemble_models.append(model_i)
+        print(f"[INFO] Loaded baseline ensemble model {idx+1}/{len(ckpt_paths)} from: {ckpt}")
 
     return ensemble_models
 
