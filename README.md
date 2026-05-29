@@ -162,7 +162,7 @@ python RINAMI_train_and_test.py Maxwell_test USER_TRAINED
 # Benchmark on the Garcia dataset using the newly trained model parameters.
 python RINAMI_train_and_test.py Garcia_test USER_TRAINED 
 ```
-※ The argument [split num] in RINAMI_train_and_test.py should be set to 1, 2, or 3 to use split_1, split_2, or split_3, respectively.
+Note: The `[split_num]` argument in `RINAMI_train_and_test.py` should be set to `1`, `2`, or `3` to use `split_1`, `split_2`, or `split_3`, respectively.
     
 ## Testing the baseline model
 
