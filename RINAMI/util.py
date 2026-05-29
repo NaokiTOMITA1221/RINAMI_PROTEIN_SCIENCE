@@ -988,14 +988,14 @@ def _copy_non_esm_modules(src_model, dst_model):
 
 
 def build_shared_ensemble_models(ckpt_paths, ESM_size=ESM_SIZE, dropout=0.1):
-    from RINAMI_model_main import RINAMIInterpretableMultiTask
+    from RINAMI_model_main import RINAMI
 
     if len(ckpt_paths) == 0:
         raise ValueError("ckpt_paths is empty")
 
     print("[INFO] Building ensemble models with shared ESM encoder")
 
-    base_model = RINAMIInterpretableMultiTask(dropout=dropout, ESM_size=ESM_size).to(device)
+    base_model = RINAMI(dropout=dropout, ESM_size=ESM_size).to(device)
     base_state = torch.load(ckpt_paths[0], map_location=device)
     base_model.load_state_dict(base_state, strict=False)
 
@@ -1006,10 +1006,10 @@ def build_shared_ensemble_models(ckpt_paths, ESM_size=ESM_SIZE, dropout=0.1):
 
     ensemble_models = []
     for idx, ckpt in enumerate(ckpt_paths):
-        model_i = RINAMIInterpretableMultiTask(dropout=dropout, ESM_size=ESM_size).to(device)
+        model_i = RINAMI(dropout=dropout, ESM_size=ESM_size).to(device)
         model_i.aa_seq_encoder = shared_esm
 
-        tmp_model = RINAMIInterpretableMultiTask(dropout=dropout, ESM_size=ESM_size).to(device)
+        tmp_model = RINAMI(dropout=dropout, ESM_size=ESM_size).to(device)
         tmp_state = torch.load(ckpt, map_location=device)
         tmp_model.load_state_dict(tmp_state, strict=False)
 
