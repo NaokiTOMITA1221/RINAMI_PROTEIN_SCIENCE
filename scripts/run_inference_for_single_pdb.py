@@ -1,19 +1,3 @@
-"""Run RINAMI inference using the averaged outputs of three LPM checkpoints.
-
-This script is intended to be placed in the `scripts/` directory of the
-published RINAMI repository and executed as:
-
-    python run_inference.py <input.pdb>
-
-It generates the temporary ProteinMPNN node representations and output
-profiles for the input PDB, runs three lowest-performing-model checkpoints,
-and reports the ensemble-averaged prediction.
-
-Optionally, it can also save:
-  - the ensemble-averaged residue-amino-acid-wise dG matrix as .npz
-  - a heatmap image (.png) of the ensemble-averaged residue-amino-acid-wise dG matrix
-"""
-
 import argparse
 import shutil
 import subprocess
