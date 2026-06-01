@@ -96,7 +96,7 @@ To train and test RINAMI by yourself, the protein structures in the Mega-scale d
     processed_data/Maxwell_predicted_structure_pdb/ 
     processed_data/Garcia_benchmark_predicted_structure_pdb/
 
-In this study, the Mega-scale and Garcia protein structures were predicted using ESMFold v1 implemented in the esm package version 2.0.0.
+In this study, the Mega-scale, Maxwell, and Garcia protein structures were predicted using ESMFold v1 implemented in the esm package version 2.0.0.
 Structural prediction for all datasets typically takes about four days with ESMFold.
 
 
