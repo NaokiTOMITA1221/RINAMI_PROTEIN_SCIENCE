@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Run RINAMI inference using the averaged outputs of three LPM checkpoints.
 
 This script is intended to be placed in the `scripts/` directory of the
@@ -39,8 +38,6 @@ DEFAULT_LPM_SPLITS = (1, 2, 3)
 AA_ORDER_CANONICAL = "ACDEFGHIKLMNPQRSTVWY"
 AA_ORDER_HEATMAP = "QENHDRKTSAGMCLVIWYFP"
 
-# Make imports work when this script is executed from either `scripts/` or the
-# repository root.
 sys.path.insert(0, str(RINAMI_DIR))
 sys.path.insert(0, str(SCRIPT_DIR))
 

@@ -1,37 +1,3 @@
-#!/usr/bin/env python3
-"""
-Batch RINAMI dG prediction for a directory containing PDB files.
-
-Place this script in:
-    RINAMI_PROTEIN_SCIENCE/scripts/batch_predict_dG_from_pdb_dir.py
-
-Example:
-    cd /path/to/RINAMI_PROTEIN_SCIENCE/scripts
-
-    python batch_predict_dG_from_pdb_dir.py \
-        ../example_pdbs \
-        --out-csv ../batch_predictions.csv
-
-With residue-amino-acid-wise dG heatmaps:
-    python batch_predict_dG_from_pdb_dir.py \
-        ../example_pdbs \
-        --out-csv ../batch_predictions.csv \
-        --save-residue-amino-acid-dG-heatmap \
-        --heatmap-out-dir ../residue_amino_acid_dG_heatmaps
-
-This script assumes the public RINAMI repository layout:
-    RINAMI_PROTEIN_SCIENCE/
-        RINAMI/
-        pth/lowest_performing_models/pth_split_1/LPM.pth
-        pth/lowest_performing_models/pth_split_2/LPM.pth
-        pth/lowest_performing_models/pth_split_3/LPM.pth
-        processed_data/
-        scripts/
-            pdb_to_mpnn_node_rep.py
-            pdb_to_mpnn_output_profile.py
-            batch_predict_dG_from_pdb_dir.py
-"""
-
 from __future__ import annotations
 
 import argparse
@@ -68,11 +34,7 @@ AA_REORDER_INDEX = [AA_ORDER_CANONICAL.index(aa) for aa in AA_ORDER_PLOT]
 sys.path.insert(0, str(RINAMI_DIR))
 sys.path.insert(0, str(SCRIPT_DIR))
 
-try:
-    from RINAMI_model_main import RINAMI
-except ImportError:
-    # Public releases may use a shorter filename.
-    from RINAMI_model_main import RINAMI
+from RINAMI_model_main import RINAMI
 
 from util import get_sequence_from_single_chain_pdb
 
@@ -365,8 +327,7 @@ def save_residue_amino_acid_dg_heatmap(
     """
     Save residue-amino-acid-wise dG matrix as a heatmap.
 
-    Expected matrix shape is usually:
-        (L, 20) or (20, L)
+    Expected matrix shape: (20, L)
 
     This function normalizes it to:
         y-axis: amino acids
@@ -387,11 +348,9 @@ def save_residue_amino_acid_dg_heatmap(
         raise ValueError(
             "Unexpected residue-amino-acid-wise dG matrix shape. "
             f"matrix.shape={matrix.shape}, sequence_length={seq_len}. "
-            "Expected (L, 20) or (20, L)."
+            "Expected (20, L)."
         )
 
-    # Reorder amino acids for a visually interpretable physicochemical-like grouping,
-    # while preserving the canonical model output order internally.
     plot_mat = plot_mat[AA_REORDER_INDEX, :]
     y_labels = list(AA_ORDER_PLOT)
     x_labels = [f"{i + 1}{aa}" for i, aa in enumerate(aa_seq)]
@@ -401,7 +360,7 @@ def save_residue_amino_acid_dg_heatmap(
 
     fig, ax = plt.subplots(figsize=(width, height))
 
-    im = ax.imshow(plot_mat, aspect="auto", interpolation="nearest")
+    im = ax.imshow(plot_mat, vmin=-1.0, vmax=1.0, aspect="auto", interpolation="nearest")
     cbar = fig.colorbar(im, ax=ax)
     cbar.set_label("Residue-amino-acid-wise predicted ΔG contribution")
 
@@ -409,10 +368,9 @@ def save_residue_amino_acid_dg_heatmap(
     ax.set_yticklabels(y_labels)
     ax.set_ylabel("Amino acid")
 
-    # Avoid unreadable x-axis labels for long proteins.
     if seq_len <= 80:
         ax.set_xticks(np.arange(seq_len))
-        ax.set_xticklabels(x_labels, rotation=90, fontsize=6)
+        ax.set_xticklabels(x_labels, rotation=90, fontsize=8)
     else:
         step = max(1, seq_len // 40)
         tick_positions = np.arange(0, seq_len, step)
@@ -420,7 +378,7 @@ def save_residue_amino_acid_dg_heatmap(
         ax.set_xticklabels(
             [str(i + 1) for i in tick_positions],
             rotation=90,
-            fontsize=7,
+            fontsize=8,
         )
 
     ax.set_xlabel("Residue position")
