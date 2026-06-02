@@ -1,12 +1,8 @@
-#!/usr/bin/env python3
 from __future__ import annotations
 
 import sys
 from pathlib import Path
 
-# Put ProteinMPNN_to_get_emb/ at the front of sys.path so that
-# 'from protein_mpnn_utils import ...' resolves to the canonical
-# (non-embedding) implementation, not scripts_refined/protein_mpnn_utils.py.
 _SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(_SCRIPT_DIR / "ProteinMPNN_to_get_emb"))
 
@@ -121,7 +117,7 @@ def compute_profile_for_pdb(
             None, None, tied_positions_dict, None, None,
         )
 
-        randn_1 = torch.randn(chain_M.shape, device=X.device)
+        randn_1 = torch.zeros(chain_M.shape, device=X.device)
         log_probs = model(
             X, S, mask, chain_M * chain_M_pos,
             residue_idx, chain_encoding_all, randn_1,
