@@ -182,8 +182,6 @@ After these split-wise tests, the Maxwell benchmark will be performed.
 
 ## Acknowledgements
 
-## Third-party code and licenses
-
 RINAMI uses or adapts several publicly available resources and software packages.
 
 Protein structures used in this study were predicted using ESMFold implemented in the `esm` package. ProteinMPNN was used to generate structure-based node representations and output profiles from protein structures. Part of the ProteinMPNN-related code and pretrained model parameters are included in `scripts/ProteinMPNN_to_get_emb/` under the ProteinMPNN MIT License, which is provided in `scripts/ProteinMPNN_to_get_emb/LICENSE`.
