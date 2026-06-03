@@ -117,7 +117,7 @@ def compute_profile_for_pdb(
             None, None, tied_positions_dict, None, None,
         )
         
-        #Replaced torch.randn to torch.zeros to fix the initialization in the RINAMI inference
+        # Use deterministic zero noise during RINAMI feature generation.
         randn_1 = torch.zeros(chain_M.shape, device=X.device)
         log_probs = model(
             X, S, mask, chain_M * chain_M_pos,
@@ -189,5 +189,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    warnings.filterwarnings("default")
     main()

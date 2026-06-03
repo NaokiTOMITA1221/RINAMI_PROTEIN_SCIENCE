@@ -3,14 +3,10 @@ import json
 import math
 import os
 import sys
-import subprocess as sb
 
 import matplotlib
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
-import seaborn as sns
 import torch
 import tqdm
 from sklearn.metrics import average_precision_score, roc_auc_score
@@ -426,9 +422,7 @@ def run_garcia_benchmark_ensemble(
     true_neg_num_list = []
 
     for seq_len_threshold in seq_len_threshold_list:
-        print(
-            "#######################################################################################################################################################################################################################################"
-        )
+        print("#" * 80)
         print(f"seq_len_threshold = {seq_len_threshold}")
 
         (
@@ -535,22 +529,22 @@ if __name__ == "__main__":
             "  export:\n"
             "    python3 RINAMI_train_and_test.py <ckpt> export_interpretability <split_num> <out_dir>\n"
             "\n"
-            "  Maxwell ensemble test (short):\n"
+            "  Maxwell test with the manuscript-reported models:\n"
             "    python3 RINAMI_train_and_test.py Maxwell_test\n"
             "\n"
-            "  Garcia ensemble test (short):\n"
+            "  Garcia test with the manuscript-reported models:\n"
             "    python3 RINAMI_train_and_test.py Garcia_test\n"
             "\n"
-            "  Maxwell ensemble test (legacy style):\n"
+            "  Maxwell test with user-trained models:\n"
             "    python3 RINAMI_train_and_test.py Maxwell_test USER_TRAINED\n"
             "\n"
-            "  Garcia ensemble test (legacy style):\n"
+            "  Garcia test with user-trained models:\n"
             "    python3 RINAMI_train_and_test.py Garcia_test USER_TRAINED\n"
             "\n"
-            "  Maxwell ensemble test (baseline models):\n"
+            "  Maxwell test with the baseline models:\n"
             "    python3 RINAMI_train_and_test.py Maxwell_test BASELINE\n"
             "\n"
-            "  Garcia ensemble test (baseline models):\n"
+            "  Garcia test with the baseline models:\n"
             "    python3 RINAMI_train_and_test.py Garcia_test BASELINE\n"
         
             )

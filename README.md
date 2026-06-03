@@ -179,3 +179,13 @@ bash test_Baseline_RINAMI.sh
 ```
 After this execution, the model will be tested once for each of the three splits: split_1, split_2, and split_3.
 After these split-wise tests, the Maxwell benchmark will be performed.
+
+## Acknowledgements
+
+RINAMI builds on several publicly available resources and software packages. We sincerely thank the authors and developers of these resources for making their work available to the research community.
+
+Protein structures used in this study were predicted using ESMFold implemented in the `esm` package. ProteinMPNN was used to generate structure-based node representations and output profiles from protein structures, and part of the ProteinMPNN-related code and pretrained model parameters are included in this repository under the corresponding license. We thank the developers of ESMFold, the `esm` package, and ProteinMPNN for their valuable contributions.
+
+We also thank the authors of the Mega-scale, Maxwell, and Garcia benchmark datasets, which enabled the training and evaluation of RINAMI. Sequence-similarity-based clustering and homolog detection were performed using MMseqs2.
+
+If you use this repository, please also cite the original papers describing these resources where appropriate, including ProteinMPNN, ESMFold/ESM, MMseqs2, and the benchmark datasets used in this study.
