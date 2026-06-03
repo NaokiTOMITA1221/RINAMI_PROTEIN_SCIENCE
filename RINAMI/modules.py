@@ -127,6 +127,12 @@ class aa_seq2representation(nn.Module):
 '''
 Constructing this module is based on the following paper:
 Takuto Koyama, et al., Chemical Genomics Language Model toward Reliable and Explainable Compound-Protein Interaction Exploration, J. Cheminform., 2026.
+This attention layer is adapted from the publicly available ChemGLaM implementation: 
+https://github.com/clinfo/ChemGLaM
+ChemGLaM is distributed under the Apache License 2.0.
+See third_party_licenses/ChemGLaM_LICENSE for details.
+The adapted implementation was modified for use in RINAMI.
+
 '''
 class MultiHeadCrossAttention(nn.Module):
     """
@@ -195,6 +201,11 @@ class MultiHeadCrossAttention(nn.Module):
 '''
 Constructing this module is based on the following paper:
 Takuto Koyama, et al., Chemical Genomics Language Model toward Reliable and Explainable Compound-Protein Interaction Exploration, J. Cheminform., 2026.
+This MLP is adapted from the publicly available ChemGLaM implementation: 
+https://github.com/clinfo/ChemGLaM
+ChemGLaM is distributed under the Apache License 2.0.
+See third_party_licenses/ChemGLaM_LICENSE for details.
+The adapted implementation was modified for use in RINAMI.
 '''
 class MLP(nn.Module):
     """

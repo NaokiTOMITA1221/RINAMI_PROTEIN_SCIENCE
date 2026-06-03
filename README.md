@@ -182,6 +182,12 @@ After these split-wise tests, the Maxwell benchmark will be performed.
 
 ## Acknowledgements
 
-RINAMI uses or builds upon several publicly available resources and software packages. We acknowledge the authors and developers of ESMFold/ESM, ProteinMPNN, MMseqs2, and the benchmark datasets used in this study for making these resources available to the research community.
+## Third-party code and licenses
 
-Protein structures used in this study were predicted using ESMFold implemented in the `esm` package. ProteinMPNN was used to generate structure-based node representations and output profiles from protein structures. Part of the ProteinMPNN-related code and pretrained model parameters are included in this repository under the corresponding license.
+RINAMI uses or adapts several publicly available resources and software packages.
+
+Protein structures used in this study were predicted using ESMFold implemented in the `esm` package. ProteinMPNN was used to generate structure-based node representations and output profiles from protein structures. Part of the ProteinMPNN-related code and pretrained model parameters are included in `scripts/ProteinMPNN_to_get_emb/` under the ProteinMPNN MIT License, which is provided in `scripts/ProteinMPNN_to_get_emb/LICENSE`.
+
+Some neural-network components in RINAMI, including the MLP module and attention layer, include implementation adapted from the publicly available ChemGLaM repository. ChemGLaM is distributed under the Apache License 2.0, and a copy of the license is provided in `third_party_licenses/ChemGLaM_LICENSE`. The adapted implementation was modified for protein folding free-energy prediction in RINAMI.
+
+This attribution does not imply endorsement, collaboration, or responsibility for RINAMI by the authors of the cited third-party resources.
