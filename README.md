@@ -180,11 +180,11 @@ bash test_Baseline_RINAMI.sh
 After this execution, the model will be tested once for each of the three splits: split_1, split_2, and split_3.
 After these split-wise tests, the Maxwell benchmark will be performed.
 
-## Acknowledgements
+## Third-party resources and acknowledgements
 
 RINAMI uses or adapts several publicly available resources and software packages.
 
 Protein structures used in this study were predicted using ESMFold implemented in the `esm` package. ProteinMPNN was used to generate structure-based node representations and output profiles from protein structures. Part of the ProteinMPNN-related code and pretrained model parameters are included in `scripts/ProteinMPNN_to_get_emb/` under the ProteinMPNN MIT License, which is provided in `scripts/ProteinMPNN_to_get_emb/LICENSE`.
 
-Some neural-network components in RINAMI, including the MLP module and attention layer, include implementation adapted from the publicly available ChemGLaM repository `https://github.com/clinfo/ChemGLaM`. ChemGLaM is distributed under the Apache License 2.0, and a copy of the license is provided in `third_party_licenses/ChemGLaM_LICENSE`. The adapted implementation was modified for protein folding free-energy prediction in RINAMI.
+Some neural-network components in RINAMI, including the MLP module and attention layer, include implementation adapted from the publicly available [ChemGLaM repository](https://github.com/clinfo/ChemGLaM). ChemGLaM is distributed under the Apache License 2.0, and a copy of the license is provided in `third_party_licenses/ChemGLaM_LICENSE`. The adapted implementation was modified for protein folding free-energy prediction in RINAMI.
 
