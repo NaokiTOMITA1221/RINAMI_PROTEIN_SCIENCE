@@ -116,7 +116,8 @@ def compute_profile_for_pdb(
             batch_clones, device, chain_id_dict,
             None, None, tied_positions_dict, None, None,
         )
-
+        
+        #Replaced torch.randn to torch.zeros to fix the initialization in the RINAMI inference
         randn_1 = torch.zeros(chain_M.shape, device=X.device)
         log_probs = model(
             X, S, mask, chain_M * chain_M_pos,
