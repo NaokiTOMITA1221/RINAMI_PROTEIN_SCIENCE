@@ -81,7 +81,7 @@ class aa_seq2representation(nn.Module):
         self.batch_converter = self.alphabet.get_batch_converter()
 
         for name, param in self.lm.named_parameters():
-            param.requires_grad = True  ##original: True
+            param.requires_grad = False
     def forward(self, seq_list):
         '''
         input : list of aa-sequences
@@ -126,7 +126,7 @@ class aa_seq2representation(nn.Module):
 ################################################################################
 '''
 Constructing this module is based on the following paper:
-Takuto Koyama, et al., Chemical Genomics Language Model toward Reliable and Explainable Compound-Protein Interaction Exploration, J. Cheminform., 2026.
+Takuto Koyama, et al., Chemical Genomics Language Model toward Reliable and Explainable Compound-Protein Interaction Exploration, J. Cheminform., 2026. https://link.springer.com/article/10.1186/s13321-026-01155-z
 This attention layer is adapted from the publicly available ChemGLaM implementation: 
 https://github.com/clinfo/ChemGLaM
 ChemGLaM is distributed under the Apache License 2.0.
@@ -200,7 +200,7 @@ class MultiHeadCrossAttention(nn.Module):
 ##########################
 '''
 Constructing this module is based on the following paper:
-Takuto Koyama, et al., Chemical Genomics Language Model toward Reliable and Explainable Compound-Protein Interaction Exploration, J. Cheminform., 2026.
+Takuto Koyama, et al., Chemical Genomics Language Model toward Reliable and Explainable Compound-Protein Interaction Exploration, J. Cheminform., 2026. https://link.springer.com/article/10.1186/s13321-026-01155-z
 This MLP is adapted from the publicly available ChemGLaM implementation: 
 https://github.com/clinfo/ChemGLaM
 ChemGLaM is distributed under the Apache License 2.0.

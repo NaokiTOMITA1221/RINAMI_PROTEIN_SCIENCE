@@ -3,7 +3,6 @@ import glob
 import json
 import math
 import os
-import sys
 
 import matplotlib
 matplotlib.use("Agg")
@@ -28,13 +27,11 @@ from Bio.PDB import PPBuilder
 
 def get_sequence_from_single_chain_pdb(pdb_path):
     """
-
     Args:
-        sequences            : AA-seq list
-        padding_value (float): default = 0.0
-
+        pdb_path (str): Path to a single-chain PDB file.
+        
     Returns:
-        np.ndarray: one-hot tensor (shape: (N, max_len, 20))
+        str: Amino acid sequence extracted from the first chain.
     """
     parser = PDBParser(QUIET=True)
     structure = parser.get_structure("protein", pdb_path)
@@ -599,8 +596,8 @@ def load_mega_test_and_val_wt_only(split_num):
     csv_path = f"{base}/split_{split_num}/test_numeric_dG.csv"
     df = pd.read_csv(csv_path, low_memory=False)
 
-    if "WT_name" not in df.columns:
-        raise KeyError(f"'WT_name' column was not found in {csv_path}")
+    if "mmseqs_cluster" not in df.columns:
+        raise KeyError(f"'mmseqs_cluster' column was not found in {csv_path}")
 
     seqs, dgs, structs, profiles, names, pdbs = [], [], [], [], [], []
 
@@ -623,8 +620,8 @@ def load_mega_test_and_val_wt_only(split_num):
     csv_path = f"{base}/split_{split_num}/validation_numeric_dG.csv"
     df = pd.read_csv(csv_path, low_memory=False)
 
-    if "WT_name" not in df.columns:
-        raise KeyError(f"'WT_name' column was not found in {csv_path}")
+    if "mmseqs_cluster" not in df.columns:
+        raise KeyError(f"'mmseqs_cluster' column was not found in {csv_path}")
 
     for name, wt_name, seq, dg in zip(df["name"], df["mmseqs_cluster"], df["aa_seq"], df["dG_ML"]):
         clean_name = rename_data(name).replace(".pdb", "").replace("__", "_")
@@ -643,7 +640,7 @@ def load_mega_test_and_val_wt_only(split_num):
         pdbs.append(pdb_path)
 
 
-    print(f"[INFO] WT-only export dataset: {len(names)} samples loaded from split {split_num}")
+    print(f"[INFO] Cluster representative in the validation and test subdatasets: {len(names)} samples loaded from split {split_num}")
 
     return {
         "seqs": seqs,
@@ -968,7 +965,11 @@ def resolve_ensemble_ckpts(ensemble_root=DEFAULT_ENSEMBLE_ROOT, splits=DEFAULT_E
             ckpt = os.path.join(ensemble_root, f"pth_split_{split}", "best.pth")
         elif ensemble_root == DEFAULT_ENSEMBLE_ROOT_BASELINE:
             ckpt = os.path.join(ensemble_root, f"pth_split_{split}", "baseline.pth")
-            
+        else:
+            raise ValueError(
+                f"Unexpected ensemble_root: {ensemble_root}. "
+            )
+        
         if not os.path.exists(ckpt):
             raise FileNotFoundError(f"Ensemble checkpoint not found: {ckpt}")
         ckpt_paths.append(ckpt)
@@ -1168,11 +1169,12 @@ def evaluate_maxwell_ensemble_from_avg_matrix(
 ##################################################
 def load_garcia_benchmark_dataset(seq_len_threshold=300):
     header_to_label = {}
-    for line in open("../processed_data/fasta/Garcia_zero_shot_without_detected_megascale_homologs_mmseqs_25seqid_80coverage.fasta"):
-        if ">" in line:
-            label = line.replace(">", "").strip().split("_")[-1]
-            header = line.replace(">", "").strip().replace(label, "")[:-1]
-            header_to_label[header] = label
+    with open("../processed_data/fasta/Garcia_zero_shot_without_detected_megascale_homologs_mmseqs_25seqid_80coverage.fasta") as f:
+        for line in f:
+            if ">" in line:
+                label = line.replace(">", "").strip().split("_")[-1]
+                header = line.replace(">", "").strip().replace(label, "")[:-1]
+                header_to_label[header] = label
 
     df = pd.read_csv("../processed_data/csv/Garcia_zero_shot_without_detected_megascale_homologs_mmseqs_25seqid_80coverage.csv")
 
