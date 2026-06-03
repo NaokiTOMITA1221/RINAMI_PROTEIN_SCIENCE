@@ -182,10 +182,6 @@ After these split-wise tests, the Maxwell benchmark will be performed.
 
 ## Acknowledgements
 
-RINAMI builds on several publicly available resources and software packages. We sincerely thank the authors and developers of these resources for making their work available to the research community.
+RINAMI uses or builds upon several publicly available resources and software packages. We acknowledge the authors and developers of ESMFold/ESM, ProteinMPNN, MMseqs2, and the benchmark datasets used in this study for making these resources available to the research community.
 
-Protein structures used in this study were predicted using ESMFold implemented in the esm package. ProteinMPNN was used to generate structure-based node representations and output profiles from protein structures, and part of the ProteinMPNN-related code and pretrained model parameters are included in this repository under the corresponding license. We thank the developers of ESMFold, the esm package, and ProteinMPNN for their valuable contributions.
-
-The implementation of some neural-network modules in RINAMI, including the MLP module and attention layer, was partly informed by the implementation in Koyama et al.'s work. We thank the authors for making their work available.
-
-We also thank the authors of the Mega-scale, Maxwell, and Garcia benchmark datasets, which enabled the training and evaluation of RINAMI. Sequence-similarity-based clustering and homolog detection were performed using MMseqs2.
+Protein structures used in this study were predicted using ESMFold implemented in the `esm` package. ProteinMPNN was used to generate structure-based node representations and output profiles from protein structures. Part of the ProteinMPNN-related code and pretrained model parameters are included in this repository under the corresponding license.
