@@ -190,4 +190,3 @@ Protein structures used in this study were predicted using ESMFold implemented i
 
 Some neural-network components in RINAMI, including the MLP module and attention layer, include implementation adapted from the publicly available ChemGLaM repository. ChemGLaM is distributed under the Apache License 2.0, and a copy of the license is provided in `third_party_licenses/ChemGLaM_LICENSE`. The adapted implementation was modified for protein folding free-energy prediction in RINAMI.
 
-This attribution does not imply endorsement, collaboration, or responsibility for RINAMI by the authors of the cited third-party resources.
