@@ -15,7 +15,7 @@ import numpy as np
 import torch
 import tqdm
 
-from protein_mpnn_utils import (  # type: ignore
+from protein_mpnn_utils import (  
     ProteinMPNN,
     parse_PDB,
     StructureDatasetPDB,
@@ -33,7 +33,7 @@ def _load_model(
     weights_dir = _SCRIPT_DIR / "ProteinMPNN_to_get_emb" / "vanilla_model_weights"
     checkpoint_path = weights_dir / f"{model_name}.pt"
 
-    checkpoint = torch.load(checkpoint_path, map_location=device)
+    checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=True)
     print("Number of edges:", checkpoint["num_edges"])
     print(f"Training noise level: {checkpoint['noise_level']}A")
 
