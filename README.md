@@ -157,10 +157,10 @@ cd RINAMI
 # Benchmark on the Mega-scale test subdataset of the specified data split.
 python RINAMI_train_and_test.py [model_parameter_path] Mega_test [split_num]
 
-# Benchmark on the Maxwell dataset using the lowest-performing models.
+# Benchmark on the Maxwell dataset using the manuscript-reported models.
 python RINAMI_train_and_test.py Maxwell_test
 
-# Benchmark on the Garcia dataset using the lowest-performing models.
+# Benchmark on the Garcia dataset using the manuscript-reported models.
 python RINAMI_train_and_test.py Garcia_test
 
 # Benchmark on the Maxwell dataset using the newly trained model parameters.
