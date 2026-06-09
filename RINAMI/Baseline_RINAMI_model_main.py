@@ -63,22 +63,6 @@ class BaselineRINAMI(nn.Module):
         self.register_buffer("alpha_in_sigmoid", torch.tensor(10.0))
 
 
-    def load_state_dict(self, state_dict, strict=True):
-        """Load checkpoints while accepting the previous matrix-name keys."""
-        legacy_suffix = "aa_" + "res_" + "mat"
-        renamed = {
-            f"layer_norm_{legacy_suffix}.": "layer_norm_residue_amino_acid_wise_dG_mat.",
-             "MLP_instead_for_CA."         : "MLP_instead_of_CA.",
-        }
-        remapped_state_dict = {}
-        for key, value in state_dict.items():
-            new_key = key
-            for old_prefix, new_prefix in renamed.items():
-                if key.startswith(old_prefix):
-                    new_key = new_prefix + key[len(old_prefix):]
-                    break
-            remapped_state_dict[new_key] = value
-        return super().load_state_dict(remapped_state_dict, strict=strict)
 
     def _load_inputs(self, seq_list, feat_path_list, profile_path_list):
         aa_seq_onehots = aa_sequences_to_padded_onehot(seq_list).to(self.device)
