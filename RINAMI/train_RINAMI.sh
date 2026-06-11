@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ========= user settings =========
+############# user settings ############
 SCRIPT_DIR="${SCRIPT_DIR:-./}"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 TRAIN_SCRIPT="${TRAIN_SCRIPT:-RINAMI_train_and_test.py}"
@@ -33,9 +33,9 @@ echo "RUN_MEGA_TEST=${RUN_MEGA_TEST}"
 echo
 
 for split in ${SPLITS}; do
-    echo "============================================================"
+    echo "############################################################"
     echo "Starting training for split ${split}"
-    echo "============================================================"
+    echo "############################################################"
 
     SPLIT_DIR="${OUT_ROOT}/pth_split_${split}"
     mkdir -p "${SPLIT_DIR}"

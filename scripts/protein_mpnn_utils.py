@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 ProteinMPNN utilities for node-embedding extraction.
 
@@ -27,9 +26,9 @@ import torch
 import torch.nn.functional as F
 
 
-# ---------------------------------------------------------------------------
-# Load the canonical ProteinMPNN utility module without name collision
-# ---------------------------------------------------------------------------
+##########################################################################
+# Load the canonical ProteinMPNN utility module without name collision   #
+##########################################################################
 
 _HERE = Path(__file__).resolve().parent
 _REAL_UTILS_PATH = _HERE / "ProteinMPNN_to_get_emb" / "protein_mpnn_utils.py"
@@ -52,9 +51,9 @@ sys.modules["_rinami_canonical_protein_mpnn_utils"] = _real
 _spec.loader.exec_module(_real)
 
 
-# ---------------------------------------------------------------------------
-# Re-export canonical names expected by existing scripts
-# ---------------------------------------------------------------------------
+##########################################################################
+# Re-export canonical names expected by existing scripts                 #
+##########################################################################
 
 _scores = _real._scores
 _S_to_seq = _real._S_to_seq
@@ -85,9 +84,9 @@ ProteinFeatures = _real.ProteinFeatures
 _ProteinMPNN = _real.ProteinMPNN
 
 
-# ---------------------------------------------------------------------------
-# ProteinMPNN subclass for node-embedding extraction
-# ---------------------------------------------------------------------------
+##########################################################################
+# ProteinMPNN subclass for node-embedding extraction                     #
+##########################################################################
 
 class ProteinMPNN(_ProteinMPNN):
     """
