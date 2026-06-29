@@ -97,11 +97,11 @@ def pad_feature_matrices(feature_list, padding_value=0.0):
 
 ####################################################################
 # Train-time sub-sampling ratio                                    #
-# 1.0 uses the full training dataset.                              #
+# 1.0 uses the full training dataset at every epoch.               #
 # 0.2 randomly samples 20% of the training dataset at every epoch. #
 # This reduces training time and can act as a regularizer by       #
 # varying the samples used for gradient updates across epochs.     #
-# Validation, test, and export always use all samples.             #
+# Validation, test always use all samples.                         #
 ####################################################################
 TRAIN_SAMPLE_FRACTION = 0.2
 ESM_SIZE = 320
