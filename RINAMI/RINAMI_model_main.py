@@ -25,7 +25,6 @@ class RINAMI(nn.Module):
         self.profile_dim = 20
         self.pe_dim = 128
         self.mid_dim = 128
-        self.ff_dim = 128
         self.aa_rep_dim = ESM_size
 
         # Load ESM.
