@@ -227,7 +227,7 @@ def align_residue_info_to_sequence(seq, residue_infos, pdb_path):
     Args:
         aa_sequence, residue_infos extracted by "extract_residue_info_and_rsa", pdb_path
     Process:
-        Checking whether the lengthes of the aa_sequence and structure matches or not
+        Checking whether the lengths of the aa_sequence and structure match or not
     """
     
     pdb_seq = "".join(x["aa"] for x in residue_infos)
@@ -345,7 +345,7 @@ def save_interpretability_heatmap(
 
 
 ##############################################################################################
-# Removing ":" or "|" from the Mega-scale variant names,to evade errors on the command line  #
+# Removing ":" or "|" from the Mega-scale variant names, to evade errors on the command line  #
 ##############################################################################################
 def rename_data(data_name_in_df):
     name = str(data_name_in_df)
@@ -382,9 +382,9 @@ def safe_spearman(x, y): # Spearman's R
     return float(val) if val == val else float("nan")
 
 
-################################################
-# Pos_weight for mitigating the data imbalance #
-################################################
+#########################################################################################
+# Pos_weight for mitigating the data imbalance (used in the foldability prediction task) #
+#########################################################################################
 def compute_binary_pos_weight(labels):
     labels = np.asarray(labels, dtype=np.int64)
     n_pos = int((labels == 1).sum())
