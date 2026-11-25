@@ -1,4 +1,5 @@
 # RINAMI: Residue-attributed Interpretable Neural network for predicting Absolute folding free energy by Merging structure and sequence Information
+Paper link: https://onlinelibrary.wiley.com/doi/10.1002/pro.70717
 !["Figure of architecture"](./Figure/Figure1_RINAMI.png)
 
 
